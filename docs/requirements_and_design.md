@@ -28,6 +28,7 @@
 | 分類 | 技術 |
 |---|---|
 | バックエンド | Java, Spring Boot |
+| DBアクセス | MyBatis(SQLを直接記述する方式。JPAは不採用) |
 | フロントエンド | JavaScript, React, Bootstrap |
 | DB | MySQL Workbench 8.0 CE |
 | 開発環境 | Eclipse(最新の1つ前の安定版), VSCode 1.128.1, Node.js |

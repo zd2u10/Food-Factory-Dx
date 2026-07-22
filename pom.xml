@@ -28,10 +28,17 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- JPA(Entity/Repository)を使うための基本パッケージ -->
+        <!--
+          MyBatis用のSpring Boot連携パッケージ。
+          これを入れると、@Mapperを付けたインターフェースを自動的にSpring管理下に置いてくれたり、
+          application.propertiesの mybatis.* 設定を読み込んでくれたりする。
+          (JPAのspring-boot-starter-data-jpaと役割は同じ「DBアクセスの土台」だが、
+           中身の思想が全く違うので、この2つは同時に使わず、どちらか一方を選ぶ)
+        -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+            <version>3.0.3</version>
         </dependency>
 
         <!-- 入力値検証(@NotNull等)を使うためのパッケージ -->

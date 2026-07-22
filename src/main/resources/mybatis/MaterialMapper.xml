@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/mybatis-3/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  namespace には、対応するMapperインターフェースの完全なパッケージ名+クラス名を書く。
+  MyBatisはこのnamespaceを見て「このXMLはどのインターフェースの実装なのか」を判断する。
+-->
+<mapper namespace="com.foodfactory.dx.mapper.MaterialMapper">
+
+    <!--
+      resultMap: SELECT結果の「列名」と、Javaオブジェクトの「フィールド名」の対応表。
+
+      DBの列名はスネークケース(material_id, is_main_material)、
+      Javaのフィールド名はキャメルケース(materialId, mainMaterial)という
+      命名規則の違いを、ここで橋渡ししている。
+
+      なお application.properties に
+        mybatis.configuration.map-underscore-to-camel-case=true
+      という設定を入れているため、実は多くの場合この対応付けは自動で行われる。
+      それでも明示的にresultMapを書いているのは、
+        ・category / base_unit のような列挙型(enum)への変換をはっきりさせるため
+        ・後から列が増えた際に対応漏れに気づきやすくするため
+      という理由による。
+    -->
+    <resultMap id="materialResultMap" type="com.foodfactory.dx.domain.Material">
+        <id column="material_id" property="materialId"/>
+        <result column="name" property="name"/>
+        <!--
+          typeHandler: DBの値(文字列)とJavaの型(enum)を変換する仕組み。
+          MyBatisは標準でJavaのenumとDBの文字列を自動変換してくれるため、
+          今回は明示的な指定を省略しても動作するが、
+          category / base_unit は特に「値が固定の選択肢しかない」という性質を持つため
+          変換が行われていることが分かるようコメントを残している。
+        -->
+        <result column="category" property="category"/>
+        <result column="base_unit" property="baseUnit"/>
+        <result column="is_main_material" property="mainMaterial"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!--
+      insert文。
+
+      useGeneratedKeys="true" : DB側で自動採番(AUTO_INCREMENT)されたIDを
+                                MyBatisに取得させるためのスイッチ。
+      keyProperty="materialId": 取得した自動採番の値を、
+                                渡した引数(material)オブジェクトのどのフィールドに
+                                詰め直すかを指定する。
+                                これにより、insert実行後に material.getMaterialId() で
+                                新しく採番されたIDがそのまま取得できるようになる。
+
+      #{name} のような書き方は「プレースホルダ」と呼ばれ、
+      渡された引数オブジェクトの対応するフィールドの値が、
+      SQLインジェクション対策された安全な形で埋め込まれる。
+      (文字列を直接連結するのではなく、JDBCのPreparedStatementの仕組みを使って埋め込むため、
+       悪意のある文字列が混ざっていてもSQLとして誤動作することがない)
+    -->
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.Material"
+            useGeneratedKeys="true" keyProperty="materialId">
+        INSERT INTO material (name, category, base_unit, is_main_material)
+        VALUES (#{name}, #{category}, #{baseUnit}, #{mainMaterial})
+    </insert>
+
+    <select id="findById" resultMap="materialResultMap">
+        SELECT material_id, name, category, base_unit, is_main_material, created_at, updated_at
+        FROM material
+        WHERE material_id = #{materialId}
+    </select>
+
+    <select id="findAll" resultMap="materialResultMap">
+        SELECT material_id, name, category, base_unit, is_main_material, created_at, updated_at
+        FROM material
+        ORDER BY material_id
+    </select>
+
+    <update id="update" parameterType="com.foodfactory.dx.domain.Material">
+        UPDATE material
+        SET name             = #{name},
+            category         = #{category},
+            base_unit        = #{baseUnit},
+            is_main_material = #{mainMaterial}
+        WHERE material_id = #{materialId}
+    </update>
+
+    <delete id="deleteById">
+        DELETE
+        FROM material
+        WHERE material_id = #{materialId}
+    </delete>
+
+</mapper>

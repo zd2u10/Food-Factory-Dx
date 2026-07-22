@@ -1,49 +1,29 @@
-package com.foodfactory.dx.entity;
+package com.foodfactory.dx.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 商品マスタ(テーブル名: items)
+ * 商品マスタ(テーブル名: items)に対応するJavaオブジェクト。
  */
-@Entity
-@Table(name = "items")
 public class Item {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "item_id")
     private Long itemId;
 
-    @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Column(name = "safety_stock_qty", nullable = false, precision = 10, scale = 2)
     private BigDecimal safetyStockQty;
 
-    @Column(name = "target_stock_qty", nullable = false, precision = 10, scale = 2)
     private BigDecimal targetStockQty;
 
-    @Column(name = "standard_batch_qty", nullable = false, precision = 10, scale = 2)
     private BigDecimal standardBatchQty;
 
-    @Column(name = "shelf_life_days", nullable = false)
     private Integer shelfLifeDays;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
 
-    protected Item() {
-        // JPA用
+    public Item() {
     }
 
     public Item(String name, BigDecimal safetyStockQty, BigDecimal targetStockQty,
@@ -57,6 +37,10 @@ public class Item {
 
     public Long getItemId() {
         return itemId;
+    }
+
+    public void setItemId(Long itemId) {
+        this.itemId = itemId;
     }
 
     public String getName() {
@@ -103,7 +87,15 @@ public class Item {
         return createdAt;
     }
 
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

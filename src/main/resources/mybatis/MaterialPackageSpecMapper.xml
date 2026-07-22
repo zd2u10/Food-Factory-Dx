@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/mybatis-3/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.foodfactory.dx.mapper.MaterialPackageSpecMapper">
+
+    <resultMap id="specResultMap" type="com.foodfactory.dx.domain.MaterialPackageSpec">
+        <id column="spec_id" property="specId"/>
+        <result column="material_id" property="materialId"/>
+        <result column="origin" property="origin"/>
+        <result column="package_weight" property="packageWeight"/>
+        <result column="package_unit_label" property="packageUnitLabel"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.MaterialPackageSpec"
+            useGeneratedKeys="true" keyProperty="specId">
+        INSERT INTO material_package_spec (material_id, origin, package_weight, package_unit_label)
+        VALUES (#{materialId}, #{origin}, #{packageWeight}, #{packageUnitLabel})
+    </insert>
+
+    <select id="findById" resultMap="specResultMap">
+        SELECT spec_id, material_id, origin, package_weight, package_unit_label, created_at, updated_at
+        FROM material_package_spec
+        WHERE spec_id = #{specId}
+    </select>
+
+    <!--
+      findByMaterialId: WHERE句の条件がmaterial_idだけなので、findByIdとほぼ同じ形。
+      違いは「1件しか返らない前提か、複数件返りうる前提か」であり、
+      これはXML側ではなく、Mapperインターフェース側の戻り値の型(Optional か List か)で表現している。
+    -->
+    <select id="findByMaterialId" resultMap="specResultMap">
+        SELECT spec_id, material_id, origin, package_weight, package_unit_label, created_at, updated_at
+        FROM material_package_spec
+        WHERE material_id = #{materialId}
+        ORDER BY origin
+    </select>
+
+    <update id="update" parameterType="com.foodfactory.dx.domain.MaterialPackageSpec">
+        UPDATE material_package_spec
+        SET origin             = #{origin},
+            package_weight     = #{packageWeight},
+            package_unit_label = #{packageUnitLabel}
+        WHERE spec_id = #{specId}
+    </update>
+
+    <delete id="deleteById">
+        DELETE
+        FROM material_package_spec
+        WHERE spec_id = #{specId}
+    </delete>
+
+</mapper>
