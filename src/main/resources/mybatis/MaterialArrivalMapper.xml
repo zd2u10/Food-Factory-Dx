@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/mybatis-3/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.foodfactory.dx.mapper.MaterialArrivalMapper">
+
+    <resultMap id="arrivalResultMap" type="com.foodfactory.dx.domain.MaterialArrival">
+        <id column="arrival_id" property="arrivalId"/>
+        <result column="order_id" property="orderId"/>
+        <result column="material_id" property="materialId"/>
+        <result column="supplier_id" property="supplierId"/>
+        <result column="arrival_date" property="arrivalDate"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.MaterialArrival"
+            useGeneratedKeys="true" keyProperty="arrivalId">
+        INSERT INTO material_arrival (order_id, material_id, supplier_id, arrival_date)
+        VALUES (#{orderId}, #{materialId}, #{supplierId}, #{arrivalDate})
+    </insert>
+
+    <select id="findById" resultMap="arrivalResultMap">
+        SELECT arrival_id, order_id, material_id, supplier_id, arrival_date, created_at, updated_at
+        FROM material_arrival
+        WHERE arrival_id = #{arrivalId}
+    </select>
+
+    <select id="findByOrderId" resultMap="arrivalResultMap">
+        SELECT arrival_id, order_id, material_id, supplier_id, arrival_date, created_at, updated_at
+        FROM material_arrival
+        WHERE order_id = #{orderId}
+        ORDER BY arrival_date
+    </select>
+
+    <select id="findAll" resultMap="arrivalResultMap">
+        SELECT arrival_id, order_id, material_id, supplier_id, arrival_date, created_at, updated_at
+        FROM material_arrival
+        ORDER BY arrival_id
+    </select>
+
+</mapper>

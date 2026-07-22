@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/mybatis-3/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.foodfactory.dx.mapper.MaterialLotMapper">
+
+    <resultMap id="lotResultMap" type="com.foodfactory.dx.domain.MaterialLot">
+        <id column="lot_id" property="lotId"/>
+        <result column="material_id" property="materialId"/>
+        <result column="arrival_line_id" property="arrivalLineId"/>
+        <result column="supplier_lot_no" property="supplierLotNo"/>
+        <result column="origin" property="origin"/>
+        <result column="expiry_date" property="expiryDate"/>
+        <result column="remaining_qty" property="remainingQty"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.MaterialLot"
+            useGeneratedKeys="true" keyProperty="lotId">
+        INSERT INTO material_lot (material_id, arrival_line_id, supplier_lot_no, origin, expiry_date, remaining_qty)
+        VALUES (#{materialId}, #{arrivalLineId}, #{supplierLotNo}, #{origin}, #{expiryDate}, #{remainingQty})
+    </insert>
+
+    <select id="findById" resultMap="lotResultMap">
+        SELECT * FROM material_lot WHERE lot_id = #{lotId}
+    </select>
+
+    <!--
+      ORDER BY expiry_date ASC : 賞味期限が「近い(早い)」順に並べる指定。
+      ASCは昇順(小さい値=日付が早いものが先頭)という意味で、
+      これがそのままFEFO(期限が近いものを先に使う)の並び順になる。
+    -->
+    <select id="findByMaterialIdOrderByExpiry" resultMap="lotResultMap">
+        SELECT *
+        FROM material_lot
+        WHERE material_id = #{materialId}
+          AND remaining_qty > 0
+        ORDER BY expiry_date ASC
+    </select>
+
+    <update id="updateRemainingQty">
+        UPDATE material_lot
+        SET remaining_qty = #{remainingQty}
+        WHERE lot_id = #{lotId}
+    </update>
+
+</mapper>

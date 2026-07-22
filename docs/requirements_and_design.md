@@ -174,10 +174,10 @@
 | テーブル名 | 概要 |
 |---|---|
 | `material_order` | 発注記録 |
-| `material_arrival` | 入荷ヘッダー(伝票単位) |
+| `material_arrival` | 入荷ヘッダー(伝票単位)。`material_id`を持つ(発注に紐づく場合は発注側の値を自動コピー。緊急入荷等、発注に紐づかない場合の材料特定のため実装時に追加) |
 | `material_arrival_line` | 入荷明細(ロット単位、検品結果、合格/保留数量) |
 | `hold_resolution` | 保留対応記録(返品/交換/受け入れ) |
-| `material_lot` | 材料ロット(在庫の実体) |
+| `material_lot` | 材料ロット(在庫の実体)。`supplier_lot_no`(仕入先発行のロット番号)を、生成元の入荷明細からコピーして保持する(表示の利便性のため実装時に追加) |
 | `stock_adjustment` | 在庫の手動調整記録 |
 
 ### 4.3 製造系
@@ -262,22 +262,60 @@ DRAFT → PLAN → MANUFACTURING → COMPLETED(通常/軽微な不良を含む)
 
 ## 7. 実装フェーズ(ロードマップ)
 
-| フェーズ | 内容 | 主なテーブル |
-|---|---|---|
-| 0 | 基盤マスタ(材料・商品・レシピ) | material, material_package_spec, items, recipe_item |
-| 1 | 材料調達(発注〜入荷〜在庫化) | material_order, material_arrival, material_arrival_line, material_lot |
-| 2 | 製造管理(コア機能、手動Draft〜完了) | manufacturing_batch, batch_material_usage |
-| 3 | 保留・交換・手動調整(例外処理群) | hold_resolution, stock_adjustment |
-| 4 | MRP自動化 | mrp_run, manufacturing_batch.origin_type |
-| 5 | 注文管理(受注〜出荷) | customer, customer_order, order_line, carrier, shipment, shipment_line |
-| 6 | 残存期限ルール・出荷FEFOの高度化 | customer.required_residual_ratio |
+| フェーズ | 内容 | 主なテーブル | 状況 |
+|---|---|---|---|
+| 0 | 基盤マスタ(材料・商品・レシピ) | material, material_package_spec, items, recipe_item | 実装済み |
+| 1 | 材料調達(発注〜入荷〜在庫化) | material_order, material_arrival, material_arrival_line, material_lot | 実装済み |
+| 2 | 製造管理(コア機能、手動Draft〜完了) | manufacturing_batch, batch_material_usage | 未着手 |
+| 3 | 保留・交換・手動調整(例外処理群) | hold_resolution, stock_adjustment | 未着手 |
+| 4 | MRP自動化 | mrp_run, manufacturing_batch.origin_type | 未着手 |
+| 5 | 注文管理(受注〜出荷) | customer, customer_order, order_line, carrier, shipment, shipment_line | 未着手 |
+| 6 | 残存期限ルール・出荷FEFOの高度化 | customer.required_residual_ratio | 未着手 |
 
 フェーズ2のFEFO計算ロジックは、UI実装より先にロジック単体での検証を推奨する。
 
 ---
 
-## 8. 改訂履歴
+## 8. 実装アーキテクチャ(フェーズ0・1)
+
+### 8.1 技術構成
+
+DBアクセスにはMyBatisを採用(JPAは不採用)。SQLはXMLファイルに明示的に記述する方式のため、
+実行されるSQLが常にコードとして目に見える状態になる。
+
+```
+controller/  REST APIのエンドポイント(リクエストの受け口)
+service/     ビジネスロジック。複数テーブルにまたがる処理はここに集約する
+mapper/      「メソッド呼び出し→SQL実行」の対応を宣言するインターフェース(@Mapper)
+domain/      DBの1行に対応するJavaオブジェクト(JPAのEntityに相当。アノテーションは持たない)
+exception/   業務エラーを分かりやすいHTTPレスポンスに変換する仕組み(GlobalExceptionHandler)
+```
+
+### 8.2 複数テーブルにまたがる更新処理の方針
+
+入荷検品登録のように「1回の登録が複数テーブル(入荷明細・材料ロット・発注ステータス)に
+影響する処理」は、DBのトリガー等は使わず、**Service層のコードとして明示的に処理を書く方針**とした
+(個人開発でのコードの追いやすさを優先するため)。この際、一連の処理は`@Transactional`を付与し、
+途中で失敗した場合は全ての変更が取り消される(ロールバックされる)ようにしている。
+
+該当実装: `ProcurementService.registerInspectedLine()`
+(入荷明細の登録 → 検品合格数量分の材料ロット自動生成 → 発注充足状況の再集計・ステータス更新)
+
+### 8.3 フェーズ1実装時に判明した設計修正
+
+- `material_arrival`(入荷ヘッダー)に`material_id`が無く、発注に紐づかない緊急入荷の場合に
+  材料を特定できないという設計漏れが見つかったため、`material_id`列を追加した
+  (発注に紐づく通常入荷の場合は、発注側の値をService層が自動的にコピーする)
+- `material_lot`(材料ロット)に、生成元となる仕入先ロット番号(`supplier_lot_no`)を
+  直接持たせていなかったため追加した。ロット番号自体は`material_arrival_line`側で
+  既に人が手入力した値であり、`material_lot`はそれをコピーして持つだけで、
+  新たにロット番号を採番しているわけではない
+
+---
+
+## 9. 改訂履歴
 
 | 版 | 内容 |
 |---|---|
 | v1 | 要件定義・全体設計を初版として作成 |
+| v2 | フェーズ0・1の実装内容を反映。MyBatis採用、material_arrival/material_lotの設計修正を追記 |

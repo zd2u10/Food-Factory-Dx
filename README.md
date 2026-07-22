@@ -109,6 +109,72 @@ SQLの中身(列名の誤字など)に問題があった場合、そのSQLを実
 `server.port=8080` としているので、起動後は `http://localhost:8080` にアクセス可能な状態になります
 (ただしまだControllerを作っていないため、現時点ではAPIエンドポイントは何も返しません)。
 
+## フェーズ1: 発注・入荷管理(追加分)
+
+対象テーブル: `material_order`, `material_arrival`, `material_arrival_line`, `material_lot`
+(DDLは `sql/phase1_procurement_schema.sql`。phase0のDDLを実行済みであることが前提)
+
+### 追加されたAPI
+
+| メソッド | URL | 内容 |
+|---|---|---|
+| POST | `/api/material-orders` | 発注を1件登録 |
+| GET  | `/api/material-orders` | 発注の一覧取得 |
+| POST | `/api/material-arrivals` | 入荷ヘッダー(伝票)を1件登録 |
+| GET  | `/api/material-arrivals` | 入荷ヘッダーの一覧取得(`?orderId=`で絞り込み可) |
+| POST | `/api/material-arrivals/{arrivalId}/lines` | 入荷明細を検品結果込みで登録(材料ロット自動生成・発注ステータス自動更新) |
+| GET  | `/api/material-lots?materialId=` | 指定した材料のロットを賞味期限順(FEFO順)で取得 |
+
+### 動作確認の流れ(curlコマンド例)
+
+事前に `material` テーブルに材料が1件登録されている必要があります(フェーズ0で試した米粉登録がまだの場合は先に実行してください)。以下は `materialId=1` が米粉である前提の例です。
+
+**1. 発注を登録する**
+```
+curl -X POST http://localhost:8080/api/material-orders -H "Content-Type: application/json" -d "{\"materialId\":1,\"supplierId\":\"仕入先A\",\"orderQty\":45000,\"orderDate\":\"2026-07-08\",\"expectedDate\":\"2026-07-09\"}"
+```
+返ってきたJSONの `orderId` を控えておいてください(以降の手順で使います)。
+
+**2. 入荷ヘッダーを登録する**(`orderId`は手順1で控えた値に置き換える)
+```
+curl -X POST http://localhost:8080/api/material-arrivals -H "Content-Type: application/json" -d "{\"orderId\":1,\"supplierId\":\"仕入先A\",\"arrivalDate\":\"2026-07-09\"}"
+```
+返ってきたJSONの `arrivalId` を控えます。`materialId`が発注側から自動的にコピーされていることも確認してください。
+
+**3. 入荷明細を検品結果込みで登録する**(`arrivalId`はURLの中に埋め込みます)
+
+以前の会話で例に出した「三重産ロットA×5箱、三重産ロットB×2箱、愛知産ロットC×3箱、すべて検品合格」のうち、まず1件目(ロットA)を登録してみます。
+
+```
+curl -X POST http://localhost:8080/api/material-arrivals/1/lines -H "Content-Type: application/json" -d "{\"supplierLotNo\":\"LOT-A\",\"origin\":\"三重\",\"expiryDate\":\"2026-10-01\",\"packageCount\":5,\"packageWeightSnapshot\":15000,\"acceptedQty\":75000,\"heldQty\":0,\"checkDamage\":true,\"checkExpiry\":true,\"checkContamination\":true}"
+```
+(packageWeightSnapshotは1箱15000g=15kgとして計算しています。5箱なので合格数量は75000gになります)
+
+**4. 材料ロットが自動生成されたか確認する**
+```
+curl http://localhost:8080/api/material-lots?materialId=1
+```
+先ほど登録した三重産・LOT-A由来のロットが1件返ってくれば成功です。
+
+**5. 発注のステータスが自動更新されたか確認する**
+```
+curl http://localhost:8080/api/material-orders
+```
+`orderId=1`の発注の`status`が、発注数量45000に対して75000が入荷しているため`FULLY_ARRIVED`(入荷完了)になっているはずです。
+
+### 意図的に組み込んだエラーチェックの確認
+
+検品結果の数量が入荷総量と一致しない場合、登録が拒否されることも確認できます。
+
+```
+curl -X POST http://localhost:8080/api/material-arrivals/1/lines -H "Content-Type: application/json" -d "{\"supplierLotNo\":\"LOT-X\",\"origin\":\"三重\",\"expiryDate\":\"2026-10-01\",\"packageCount\":1,\"packageWeightSnapshot\":15000,\"acceptedQty\":10000,\"heldQty\":0,\"checkDamage\":true,\"checkExpiry\":true,\"checkContamination\":true}"
+```
+1箱15000g届いたはずなのに合格数量を10000gとしているため一致せず、400エラーと理由メッセージが返ってくるはずです(`GlobalExceptionHandler`による変換)。
+
+### フェーズ0の設計からの修正点
+
+実装の過程で、`material_arrival`(入荷ヘッダー)に`material_id`が無く、発注に紐づかない緊急入荷の場合にどの材料の入荷か特定できないという設計漏れが見つかったため、`material_arrival`に`material_id`列を追加しています(発注に紐づく場合は自動的にコピーされます)。
+
 ## 次のステップ
 
 このフェーズ0はdomain/mapperまでの実装です。次に必要になるのは:

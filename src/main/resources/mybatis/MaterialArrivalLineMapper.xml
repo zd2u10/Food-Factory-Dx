@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/mybatis-3/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.foodfactory.dx.mapper.MaterialArrivalLineMapper">
+
+    <resultMap id="lineResultMap" type="com.foodfactory.dx.domain.MaterialArrivalLine">
+        <id column="line_id" property="lineId"/>
+        <result column="arrival_id" property="arrivalId"/>
+        <result column="supplier_lot_no" property="supplierLotNo"/>
+        <result column="origin" property="origin"/>
+        <result column="expiry_date" property="expiryDate"/>
+        <result column="package_count" property="packageCount"/>
+        <result column="package_weight_snapshot" property="packageWeightSnapshot"/>
+        <result column="arrived_qty" property="arrivedQty"/>
+        <result column="accepted_qty" property="acceptedQty"/>
+        <result column="held_qty" property="heldQty"/>
+        <result column="check_damage" property="checkDamage"/>
+        <result column="check_expiry" property="checkExpiry"/>
+        <result column="check_contamination" property="checkContamination"/>
+        <result column="exchange_source_line_id" property="exchangeSourceLineId"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.MaterialArrivalLine"
+            useGeneratedKeys="true" keyProperty="lineId">
+        INSERT INTO material_arrival_line (
+            arrival_id, supplier_lot_no, origin, expiry_date,
+            package_count, package_weight_snapshot, arrived_qty, accepted_qty, held_qty,
+            check_damage, check_expiry, check_contamination, exchange_source_line_id
+        )
+        VALUES (
+            #{arrivalId}, #{supplierLotNo}, #{origin}, #{expiryDate},
+            #{packageCount}, #{packageWeightSnapshot}, #{arrivedQty}, #{acceptedQty}, #{heldQty},
+            #{checkDamage}, #{checkExpiry}, #{checkContamination}, #{exchangeSourceLineId}
+        )
+    </insert>
+
+    <select id="findById" resultMap="lineResultMap">
+        SELECT * FROM material_arrival_line WHERE line_id = #{lineId}
+    </select>
+
+    <select id="findByArrivalId" resultMap="lineResultMap">
+        SELECT * FROM material_arrival_line WHERE arrival_id = #{arrivalId}
+    </select>
+
+    <!--
+      2段階JOINの説明:
+        material_arrival_line (mal) : 一番知りたい accepted_qty を持っている
+        material_arrival (ma)       : malがどのarrival_idに属するかを繋ぐ中間テーブル
+        material_order (mo)         : maがどのorder_idに属するかを繋ぐ、たどり着きたい先
+
+      mal → ma → mo の順にJOINで辿ることで、
+      「特定の発注(order_id)に紐づく、全ての入荷・全ての明細」を横断して集計できる。
+
+      COALESCE(SUM(...), 0): SUM()は対象データが1件もないとNULLを返す仕様のため、
+      「まだ1件も入荷していない発注」の場合にNULLではなく0を返すよう、
+      COALESCEで「NULLだったら0に置き換える」処理を挟んでいる。
+    -->
+    <select id="sumAcceptedQtyByOrderId" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(mal.accepted_qty), 0)
+        FROM material_arrival_line mal
+                 JOIN material_arrival ma ON mal.arrival_id = ma.arrival_id
+                 JOIN material_order mo ON ma.order_id = mo.order_id
+        WHERE mo.order_id = #{orderId}
+    </select>
+
+    <update id="updateInspectionResult" parameterType="com.foodfactory.dx.domain.MaterialArrivalLine">
+        UPDATE material_arrival_line
+        SET accepted_qty         = #{acceptedQty},
+            held_qty             = #{heldQty},
+            check_damage         = #{checkDamage},
+            check_expiry         = #{checkExpiry},
+            check_contamination  = #{checkContamination}
+        WHERE line_id = #{lineId}
+    </update>
+
+</mapper>
