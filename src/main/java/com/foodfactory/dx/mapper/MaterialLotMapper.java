@@ -22,9 +22,16 @@ public interface MaterialLotMapper {
     List<MaterialLot> findByMaterialIdOrderByExpiry(@Param("materialId") Long materialId);
 
     /**
-     * ロットの残量を更新する。
-     * 呼び出す際は、Service層側で「現在の残量 - 使用量」を計算した結果を渡す想定
-     * (このメソッド自身は引き算をしない。単に指定された値で上書きするだけ)。
+     * ロットの残量を「指定した量だけ減らす」。読み取った値をJava側で引き算するのではなく、
+     * DB側で「remaining_qty - usedQty」を1回のSQLで直接計算させる方式にしている。
+     *
+     * WHERE句に remaining_qty >= usedQty という条件を付けているため、
+     * 万が一2つの処理が同時に同じロットを消費しようとしても、
+     * 片方が更新した直後は remaining_qty が減っているため、
+     * もう片方の条件チェックがDB側で正しく失敗し、更新件数0件(2重消費)を防げる。
+     *
+     * 戻り値(更新件数)が0の場合、呼び出し側は「在庫が足りなかった、
+     * または他の処理と競合した」と判断してエラーにする必要がある。
      */
-    int updateRemainingQty(@Param("lotId") Long lotId, @Param("remainingQty") BigDecimal remainingQty);
+    int decrementRemainingQty(@Param("lotId") Long lotId, @Param("usedQty") BigDecimal usedQty);
 }

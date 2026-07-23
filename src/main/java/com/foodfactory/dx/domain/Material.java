@@ -4,54 +4,31 @@ import java.time.LocalDateTime;
 
 /**
  * 材料マスタに対応するJavaオブジェクト。
- *
- * JPAの時と違い、このクラスには @Entity や @Table のようなアノテーションは一切付けない。
- * MyBatisでは「このクラスがどのテーブルと対応するか」をこのクラス自身は知らず、
- * 代わりに mapper配下のXMLファイルの中で
- * 「SELECT結果のどの列を、このクラスのどのフィールドに詰めるか」を明示的に書く。
- * つまりこのクラスは、ただの「データを持ち運ぶための入れ物(POJO: Plain Old Java Object)」でしかない。
+ * JPAの時と違い @Entity 等のアノテーションは一切付けない、ただのデータの入れ物(POJO)。
  */
 public class Material {
 
-    // --- カテゴリ・単位はDB上ではただの文字列(VARCHAR/ENUM)として保存されるため、
-    //     Java側では列挙型(enum)として定義しておくと、
-    //     "RAW"や"raw"のようなタイプミスをコンパイル時に防げる。 ---
     public enum Category {
-        RAW,
-        ADDITIVE
+        RAW,      // 原料(産地・賞味期限に紐づくロット番号が仕入先から発行される)
+        ADDITIVE  // 添加物(賞味期限のみでロット番号が発行される。産地は管理基準外)
     }
 
     public enum BaseUnit {
-        WEIGHT,
-        VOLUME
+        WEIGHT,  // 重量管理(g単位で内部保存)
+        VOLUME   // 体積管理(ml単位で内部保存)
     }
 
-    // material_id は自動採番(AUTO_INCREMENT)されるため、
-    // 新規作成時はnullのままでよく、DB登録後にMyBatisが採番されたIDを詰め直してくれる。
-    private Long materialId;
+    private Long materialId;         // 主キー。自動採番されるため新規作成時はnullでよい
+    private String name;             // 材料名(例: 米粉、玄米粉、添加物A)
+    private Category category;       // RAW(原料) or ADDITIVE(添加物)
+    private BaseUnit baseUnit;       // WEIGHT(重量) or VOLUME(体積)。数量の単位系を決める
+    private boolean mainMaterial;    // ベーカーズパーセント計算の基準になる主原料かどうか
+    private LocalDateTime createdAt; // 登録日時(DB側で自動設定。読み取り専用)
+    private LocalDateTime updatedAt; // 更新日時(DB側で自動設定。読み取り専用)
 
-    private String name;
-
-    private Category category;
-
-    private BaseUnit baseUnit;
-
-    // Java の boolean はプリミティブ型(必ずtrue/falseが入る、nullになれない)。
-    // is_main_material のように「はい/いいえ」の値はこれで十分表現できる。
-    private boolean mainMaterial;
-
-    // created_at/updated_at はDB側で自動設定される値なので、
-    // Java側では「読み取り専用」として扱う(setterはあえて用意しない)。
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-
-    // MyBatisは「引数なしコンストラクタ + setter」でオブジェクトを組み立てるのが基本の動き方。
-    // (SELECT結果の1行ごとに、まずこの空のコンストラクタでインスタンスを作り、
-    //  列の値を1つずつsetterで詰めていく)
     public Material() {
     }
 
-    // 新規登録時に使う用のコンストラクタ。呼び出し側が書きやすいように用意している。
     public Material(String name, Category category, BaseUnit baseUnit, boolean mainMaterial) {
         this.name = name;
         this.category = category;
