@@ -18,6 +18,7 @@
         <result column="produced_qty" property="producedQty"/>
         <result column="accepted_qty" property="acceptedQty"/>
         <result column="remaining_qty" property="remainingQty"/>
+        <result column="exceeded_plan" property="exceededPlan"/>
         <result column="loss_qty" property="lossQty"/>
         <result column="loss_comment" property="lossComment"/>
         <result column="reject_comment" property="rejectComment"/>
@@ -62,6 +63,7 @@
             produced_qty  = #{producedQty},
             accepted_qty  = #{acceptedQty},
             remaining_qty = #{acceptedQty},
+            exceeded_plan = #{exceededPlan},
             loss_qty      = #{lossQty},
             loss_comment  = #{lossComment}
         WHERE batch_id = #{batchId}

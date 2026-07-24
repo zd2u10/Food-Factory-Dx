@@ -28,16 +28,16 @@ public interface ManufacturingBatchMapper {
 
     /**
      * 検品完了時の結果をまとめて反映し、ステータスをCOMPLETEDにする専用メソッド。
-     * (通常運用の軽微な不良は produced/accepted/loss の内訳で表現し、バッチ自体は完了扱いのまま)
-     *
-     * remainingQty(出荷等で減っていく残量)は、この完了処理の時点でacceptedQtyと同じ値で
-     * 初期化する。フェーズ5(出荷管理)で、出荷のたびにこの値を減らしていく想定。
+     * remainingQtyはacceptedQtyと同値で初期化する(フェーズ5で使用)。
+     * exceededPlanは、produced_qty(合格+不良)がplanned_qtyを超えていた場合にtrueにする
+     * (超過自体はエラーにせず許容するが、後から集計・分析できるよう記録だけ残す)。
      */
     int completeBatch(@Param("batchId") Long batchId,
                        @Param("producedQty") BigDecimal producedQty,
                        @Param("acceptedQty") BigDecimal acceptedQty,
                        @Param("lossQty") BigDecimal lossQty,
-                       @Param("lossComment") String lossComment);
+                       @Param("lossComment") String lossComment,
+                       @Param("exceededPlan") boolean exceededPlan);
 
     /** 重大な異常によりバッチ全体を破棄する場合の専用メソッド。ステータスをREJECTEDにする。 */
     int rejectBatch(@Param("batchId") Long batchId, @Param("rejectComment") String rejectComment);

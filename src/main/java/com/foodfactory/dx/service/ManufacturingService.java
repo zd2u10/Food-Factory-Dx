@@ -214,6 +214,9 @@ public class ManufacturingService {
      * 検品完了処理(MANUFACTURING → COMPLETED)。
      * 通常運用の軽微な不良(数個レベル)はここでlossQtyとして記録し、バッチ自体は完了扱いにする。
      *
+     * 計画数量(plannedQty)を超える生産(現場の頑張りによる効率向上など)はエラーにせず許容するが、
+     * 後から集計・分析できるよう exceededPlan フラグに記録だけ残す。
+     *
      * 【フェーズ2時点で未実装の部分】完了した合格数量(acceptedQty)を、
      * 商品(items)側の在庫として計上する処理はまだ無い(要件定義書8.3節の通り、
      * 商品在庫の追跡はフェーズ5で設計する想定のため)。
@@ -226,7 +229,9 @@ public class ManufacturingService {
                     "MANUFACTURING状態のバッチのみ完了できます。現在の状態: " + batch.getStatus());
         }
         BigDecimal producedQty = acceptedQty.add(lossQty);
-        manufacturingBatchMapper.completeBatch(batchId, producedQty, acceptedQty, lossQty, lossComment);
+        boolean exceededPlan = producedQty.compareTo(batch.getPlannedQty()) > 0;
+        manufacturingBatchMapper.completeBatch(
+                batchId, producedQty, acceptedQty, lossQty, lossComment, exceededPlan);
     }
 
     /**

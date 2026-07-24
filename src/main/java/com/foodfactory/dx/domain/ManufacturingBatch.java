@@ -39,6 +39,7 @@ public class ManufacturingBatch {
     private BigDecimal producedQty;     // 完了時に確定する製造数(合格+不良の合計)
     private BigDecimal acceptedQty;     // 完了時に確定する合格数(商品在庫に計上される数)
     private BigDecimal remainingQty;    // 出荷等で減っていく残量。完了時にacceptedQtyと同値で初期化(フェーズ5で使用)
+    private boolean exceededPlan;       // 完了時、produced_qty(合格+不良)がplannedQtyを超えていた場合true(超過は許容するが記録は残す)
     private BigDecimal lossQty;         // 完了時に確定する軽微な不良数
     private String lossComment;         // 軽微な不良の理由コメント
     private String rejectComment;       // REJECTEDになった場合の理由コメント
@@ -143,6 +144,14 @@ public class ManufacturingBatch {
 
     public void setRemainingQty(BigDecimal remainingQty) {
         this.remainingQty = remainingQty;
+    }
+
+    public boolean isExceededPlan() {
+        return exceededPlan;
+    }
+
+    public void setExceededPlan(boolean exceededPlan) {
+        this.exceededPlan = exceededPlan;
     }
 
     public BigDecimal getLossQty() {

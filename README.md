@@ -235,6 +235,22 @@ Body(JSON):
 1. **`recipe_item.use_qty`はバッチ1回あたりの固定使用量**として扱っている(商品の個数に比例して増減しない)。そのため`manufacturing_batch.plannedQty`は常に`items.standard_batch_qty`と同じ値になる想定で実装した。
 2. **完成品(商品)の在庫を追跡する仕組みはまだ無い**。`completeBatch`で`acceptedQty`(合格数)は記録するが、それを`items`側の在庫として反映する処理はフェーズ5(出荷管理)と合わせて設計する想定のため、今回は未実装。
 
+### 単体テスト(DB不要、Eclipse上で即実行できる)
+
+`ManufacturingService.completeBatch()`の「計画超過判定」ロジックだけを、DBに接続せず検証するテストを用意した。
+draft作成→confirm-plan→execute→completeという手順をThunder Clientで毎回やり直さなくても、
+Eclipse上で以下の手順ですぐに実行・確認できる。
+
+1. Eclipseのパッケージエクスプローラーで `src/test/java/com/foodfactory/dx/service/ManufacturingServiceTest.java` を開く
+2. ファイルを右クリック → `Run As > JUnit Test`
+3. 緑のバー(全テスト成功)が表示されれば正常
+
+含まれるテスト内容:
+- 計画数量ちょうど・以内 → `exceededPlan = false`
+- 計画数量を超過 → `exceededPlan = true`
+- `producedQty`が`acceptedQty + lossQty`と一致するか
+- `MANUFACTURING`状態でないバッチを完了しようとすると例外が飛ぶか
+
 ## 次のステップ
 
 このフェーズ0はdomain/mapperまでの実装です。次に必要になるのは:

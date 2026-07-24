@@ -28,6 +28,7 @@ CREATE TABLE manufacturing_batch (
   produced_qty    DECIMAL(10, 2) NULL COMMENT '完了時に確定する製造数(合格+不良の合計)',
   accepted_qty    DECIMAL(10, 2) NULL COMMENT '完了時に確定する合格数(商品在庫に計上される数)',
   remaining_qty   DECIMAL(10, 2) NULL COMMENT '出荷等で減っていく残量。完了時にaccepted_qtyと同値で初期化される(フェーズ5で使用)',
+  exceeded_plan   BOOLEAN NOT NULL DEFAULT FALSE COMMENT '完了時、produced_qty(合格+不良)がplanned_qtyを超えていた場合にtrue',
   loss_qty        DECIMAL(10, 2) NULL COMMENT '完了時に確定する軽微な不良数',
   loss_comment    VARCHAR(255) NULL,
   reject_comment  VARCHAR(255) NULL COMMENT 'REJECTEDになった場合の理由',
