@@ -5,25 +5,16 @@ import java.time.LocalDateTime;
 
 /**
  * 材料の梱包仕様(産地ごとの1箱/袋あたりの目安数量)。
- * JPAの時と同様、数量はBigDecimalで扱う(重量・体積は誤差の蓄積を避けるため)。
  */
 public class MaterialPackageSpec {
 
-    private Long specId;
-
-    // JPAの時は @ManyToOne で Material 型そのものを持たせていたが、
-    // MyBatisではオブジェクト参照ではなく、外部キーの値(materialId)をそのまま持たせるのが基本形。
-    // (関連先のオブジェクトが必要な場合は、別途取得するSQLを呼び出して自分で組み立てる)
-    private Long materialId;
-
-    private String origin;
-
-    private BigDecimal packageWeight;
-
-    private String packageUnitLabel;
-
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Long specId;                     // 主キー
+    private Long materialId;                 // どの材料の梱包仕様か(material.materialIdを参照)
+    private String origin;                   // 産地・仕入先区分(例: 愛知、新潟)
+    private BigDecimal packageWeight;         // 1箱/袋あたりの目安数量(重量or体積、material.baseUnitに従う)
+    private String packageUnitLabel;         // 表示用の単位名(箱、袋、缶など)
+    private LocalDateTime createdAt;         // 登録日時(DB側で自動設定)
+    private LocalDateTime updatedAt;         // 更新日時(DB側で自動設定)
 
     public MaterialPackageSpec() {
     }

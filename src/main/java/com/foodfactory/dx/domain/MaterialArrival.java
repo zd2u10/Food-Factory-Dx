@@ -7,25 +7,16 @@ import java.time.LocalDateTime;
  * 入荷ヘッダー(伝票1枚 = 1回の配送イベント)。
  * 実際のロット情報(産地・賞味期限・数量)はここではなく、
  * このヘッダーに複数ぶら下がる material_arrival_line 側が持つ。
- * (1回の配送の中に、産地・期限違いの複数ロットが混在することがあるため)
  */
 public class MaterialArrival {
 
-    private Long arrivalId;
-
-    // 発注に紐づかない緊急入荷もあり得るため、Long(ラッパー型)にしてnullを許容する。
-    // long(プリミティブ型)にしてしまうと、nullを表現できずコンパイルエラーになる。
-    private Long orderId;
-
-    // どの材料の入荷かを必ず特定できるようにするための項目。
-    // 発注に紐づく通常入荷であれば発注側のmaterialIdと同じ値になるが、
-    // 緊急入荷(orderIdがnull)の場合はこちらに直接値を設定する。
-    private Long materialId;
-
-    private String supplierId;
-    private LocalDate arrivalDate;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Long arrivalId;    // 主キー
+    private Long orderId;      // 対応する発注(緊急入荷等、発注に紐づかない場合はnull)
+    private Long materialId;   // 入荷した材料。発注に紐づく場合は発注側の値がService層で自動コピーされる
+    private String supplierId; // 仕入先
+    private LocalDate arrivalDate;   // 入荷日(伝票の日付)
+    private LocalDateTime createdAt; // 登録日時(DB側で自動設定)
+    private LocalDateTime updatedAt; // 更新日時(DB側で自動設定)
 
     public MaterialArrival() {
     }

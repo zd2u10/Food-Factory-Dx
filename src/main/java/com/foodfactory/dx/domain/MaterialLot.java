@@ -7,34 +7,19 @@ import java.time.LocalDateTime;
 /**
  * 材料ロット(在庫の実体)。
  * 入荷明細(MaterialArrivalLine)が検品合格になったタイミングで、
- * Service層の処理により自動的に1件生成される(このクラス自身はその生成ロジックを持たない)。
- *
- * remainingQty(残量)は、製造での消費や廃棄のたびに、Service層がSQLのUPDATEで減算していく。
- * FEFO(期限が近い順に使う)の判定は、この expiryDate を基準に行う。
+ * Service層の処理により自動的に1件生成される。
  */
 public class MaterialLot {
 
-    private Long lotId;
-    private Long materialId;
-
-    // どの入荷明細から生まれたロットかを必ず記録する。
-    // これにより「出荷した商品 → 使った材料ロット → 元の入荷明細(検品記録)」まで
-    // 遡って追跡できる(トレーサビリティの核となる紐付け)。
-    private Long arrivalLineId;
-
-    // 仕入先が発行したロット番号そのもの。
-    // これは material_arrival_line.supplierLotNo として既に人が手入力した値であり、
-    // ここで新しく採番しているわけではなく、そのままコピーして持たせているだけ。
-    // (arrivalLineIdを辿れば元の値は分かるが、FEFOでロットを選ぶ画面などで
-    //  毎回JOINして取りに行かずに済むよう、表示の利便性のためにコピーを持たせている)
-    private String supplierLotNo;
-
-    private String origin;
-    private LocalDate expiryDate;
-    private BigDecimal remainingQty;
-
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Long lotId;               // 主キー。材料版の「ロットID」に相当
+    private Long materialId;          // どの材料のロットか
+    private Long arrivalLineId;       // 生成元となった入荷明細(トレーサビリティの核となる紐付け)
+    private String supplierLotNo;     // 仕入先発行のロット番号(arrival_lineからコピー。ここで新規採番はしない)
+    private String origin;            // 産地
+    private LocalDate expiryDate;      // 賞味期限(FEFO判定の基準)
+    private BigDecimal remainingQty;   // 残量。消費・廃棄のたびにDB側で条件付き引き算される
+    private LocalDateTime createdAt;   // 登録日時(DB側で自動設定)
+    private LocalDateTime updatedAt;   // 更新日時(DB側で自動設定)
 
     public MaterialLot() {
     }

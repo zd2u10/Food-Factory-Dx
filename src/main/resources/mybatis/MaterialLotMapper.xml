@@ -40,10 +40,22 @@
         ORDER BY expiry_date ASC
     </select>
 
-    <update id="updateRemainingQty">
+    <!--
+      remaining_qty = remaining_qty - #{usedQty} という「DB側での引き算」がポイント。
+      Java側で事前に読み取った値を書き戻すのではなく、
+      その瞬間のDB上の値に対して直接演算させることで、読み取りと書き込みの間に
+      別の処理が割り込む余地(競合)を無くしている。
+
+      WHERE句の remaining_qty >= #{usedQty} が無いと、
+      在庫が足りない場合にマイナスの残量になってしまう。
+      この条件があることで、在庫不足の場合はそもそも1件も更新されず(結果=0件)、
+      呼び出し側でそれを検知してエラーにできる。
+    -->
+    <update id="decrementRemainingQty">
         UPDATE material_lot
-        SET remaining_qty = #{remainingQty}
+        SET remaining_qty = remaining_qty - #{usedQty}
         WHERE lot_id = #{lotId}
+          AND remaining_qty >= #{usedQty}
     </update>
 
 </mapper>

@@ -9,30 +9,18 @@ import java.util.stream.Collectors;
 /**
  * レシピ明細(商品×材料)のJavaオブジェクト。
  * allowedOrigins は DB上ではカンマ区切りの1本の文字列(VARCHAR)として保存されている。
- * Java側で扱いやすいように、リスト形式に変換するメソッドを用意している。
  */
 public class RecipeItem {
 
-    private Long recipeItemId;
-
-    // JPAの時は item / material をオブジェクトとして持たせていたが、
-    // MyBatisでは外部キーのIDだけを持たせるのが基本形(前述のMaterialPackageSpecと同じ考え方)。
-    private Long itemId;
-    private Long materialId;
-
-    private BigDecimal useQty;
-
-    // DBに保存されている生の文字列(例: "愛知,三重")。
-    // フィールド名を allowedOrigins のままにすると紛らわしいので、
-    // 「DBに入っている生の値そのもの」であることが分かるよう明示的な名前にしている。
-    private String allowedOrigins;
-
-    private boolean mainMaterial;
-
-    private boolean liquid;
-
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Long recipeItemId;       // 主キー
+    private Long itemId;             // どの商品のレシピか(items.itemIdを参照)
+    private Long materialId;         // どの材料を使うか(material.materialIdを参照)
+    private BigDecimal useQty;       // 使用量。バッチ1回あたりの固定量として扱う(個数に比例させない)
+    private String allowedOrigins;   // 使用可能な産地をカンマ区切りで保持した生の文字列(例: "愛知,三重")
+    private boolean mainMaterial;    // この商品における主原料か(ベーカーズパーセント計算の基準)
+    private boolean liquid;          // 加水率計算に合算すべき液体材料か
+    private LocalDateTime createdAt; // 登録日時(DB側で自動設定)
+    private LocalDateTime updatedAt; // 更新日時(DB側で自動設定)
 
     public RecipeItem() {
     }
@@ -89,13 +77,11 @@ public class RecipeItem {
 
     /**
      * "愛知,三重" のようなカンマ区切り文字列を ["愛知", "三重"] のリストに変換する。
-     *
-     * 処理の内訳:
-     *   1. split(",")            : カンマの位置で文字列を分割し、配列にする
-     *   2. Arrays.stream(...)    : 配列をStream(処理をつなげて書けるようにする仕組み)に変換
-     *   3. .map(String::trim)    : 各要素の前後の余分な空白を取り除く(" 三重" のような入力ミスに強くする)
-     *   4. .filter(...)          : 空文字("")になった要素を除外する(末尾に余分なカンマがあった場合の対策)
-     *   5. .collect(...)         : Streamの処理結果を、最終的に List<String> の形に集約する
+     *   1. split(",")         : カンマの位置で文字列を分割し配列にする
+     *   2. Arrays.stream(...) : 配列をStreamに変換
+     *   3. .map(String::trim) : 各要素の前後の余分な空白を取り除く
+     *   4. .filter(...)       : 空文字を除外する(末尾に余分なカンマがあった場合の対策)
+     *   5. .collect(...)      : 最終的にList<String>に集約する
      */
     public List<String> getAllowedOriginList() {
         return Arrays.stream(allowedOrigins.split(","))
@@ -104,10 +90,7 @@ public class RecipeItem {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * ["愛知", "三重"] のようなリストを "愛知,三重" のカンマ区切り文字列に変換して保持する。
-     * String.join(",", origins) は、リストの各要素をカンマで繋いで1本の文字列にするメソッド。
-     */
+    /** ["愛知", "三重"] のようなリストを "愛知,三重" のカンマ区切り文字列に変換して保持する。 */
     public void setAllowedOriginList(List<String> origins) {
         this.allowedOrigins = String.join(",", origins);
     }

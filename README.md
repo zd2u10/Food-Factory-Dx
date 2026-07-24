@@ -175,6 +175,82 @@ curl -X POST http://localhost:8080/api/material-arrivals/1/lines -H "Content-Typ
 
 実装の過程で、`material_arrival`(入荷ヘッダー)に`material_id`が無く、発注に紐づかない緊急入荷の場合にどの材料の入荷か特定できないという設計漏れが見つかったため、`material_arrival`に`material_id`列を追加しています(発注に紐づく場合は自動的にコピーされます)。
 
+## フェーズ2: 製造管理(先行実装・未検証)
+
+対象テーブル: `manufacturing_batch`, `batch_material_usage`
+(DDLは `sql/phase2_manufacturing_schema.sql`。phase0, phase1のDDLが実行済みであることが前提)
+
+**注意**: このフェーズはコードとしては書き上げているが、まだ実機での動作確認(MySQL接続確認・API呼び出し確認)ができていない。次回作業時に、フェーズ1の残り(検品登録の確認)を終えたあと、こちらの動作確認に進む。
+
+### レシピ登録の例(Thunder Client)
+
+`materialId`は既に登録済みの材料(例:米粉、materialId=1)を指定してください。
+
+```
+POST http://localhost:8080/api/items/1/recipe-items
+Body(JSON):
+{
+  "materialId": 1,
+  "useQty": 15000,
+  "allowedOrigins": "愛知,三重",
+  "mainMaterial": true,
+  "liquid": false
+}
+```
+
+
+
+```
+POST http://localhost:8080/api/items
+Body(JSON):
+{
+  "name": "醤油ラーメン",
+  "safetyStockQty": 500,
+  "targetStockQty": 500,
+  "standardBatchQty": 200,
+  "shelfLifeDays": 90
+}
+```
+
+
+### 追加されたAPI
+
+| メソッド | URL | 内容 |
+|---|---|---|
+| GET  | `/api/items` | 商品の一覧取得 |
+| POST | `/api/items` | 商品を1件登録 |
+| GET  | `/api/items/{itemId}/recipe-items` | 指定した商品のレシピ明細一覧を取得 |
+| POST | `/api/items/{itemId}/recipe-items` | レシピ明細を1件登録 |
+| POST | `/api/items/{itemId}/batches` | バッチを新規作成(DRAFT) |
+| GET  | `/api/items/{itemId}/fefo-preview` | FEFO自動選定結果のプレビュー(在庫は変更しない) |
+| GET  | `/api/batches` | バッチの一覧取得 |
+| GET  | `/api/batches/{batchId}/usages` | バッチの材料使用記録を取得 |
+| POST | `/api/batches/{batchId}/confirm-plan` | DRAFT→PLAN |
+| POST | `/api/batches/{batchId}/execute` | PLAN→MANUFACTURING(材料ロット消費) |
+| POST | `/api/batches/{batchId}/complete` | MANUFACTURING→COMPLETED(検品結果確定) |
+| POST | `/api/batches/{batchId}/reject` | MANUFACTURING→REJECTED(重大な異常時) |
+
+### 実装にあたって置いた前提(要確認)
+
+1. **`recipe_item.use_qty`はバッチ1回あたりの固定使用量**として扱っている(商品の個数に比例して増減しない)。そのため`manufacturing_batch.plannedQty`は常に`items.standard_batch_qty`と同じ値になる想定で実装した。
+2. **完成品(商品)の在庫を追跡する仕組みはまだ無い**。`completeBatch`で`acceptedQty`(合格数)は記録するが、それを`items`側の在庫として反映する処理はフェーズ5(出荷管理)と合わせて設計する想定のため、今回は未実装。
+
+### 単体テスト(DB不要、Eclipse上で即実行できる)
+
+`ManufacturingService.completeBatch()`の「計画超過判定」ロジックだけを、DBに接続せず検証するテストを用意した。
+draft作成→confirm-plan→execute→completeという手順をThunder Clientで毎回やり直さなくても、
+Eclipse上で以下の手順ですぐに実行・確認できる。
+
+1. Eclipseのパッケージエクスプローラーで `src/test/java/com/foodfactory/dx/service/ManufacturingServiceTest.java` を開く
+2. ファイルを右クリック → `Run As > JUnit Test`
+3. 緑のバー(全テスト成功)が表示されれば正常
+
+含まれるテスト内容:
+- 計画数量ちょうど・以内 → `exceededPlan = false`
+- 計画数量を超過 → `exceededPlan = true`
+- `producedQty`が`acceptedQty + lossQty`と一致するか
+- `MANUFACTURING`状態でないバッチを完了しようとすると例外が飛ぶか
+
 ## 次のステップ
 
 このフェーズ0はdomain/mapperまでの実装です。次に必要になるのは:

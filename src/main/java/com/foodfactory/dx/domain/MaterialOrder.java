@@ -10,41 +10,24 @@ import java.time.LocalDateTime;
  */
 public class MaterialOrder {
 
-    /**
-     * 発注の状態。
-     * この値はService層が「紐づく入荷明細の合格数量の合計」を計算して自動的に更新する想定
-     * (人がボタンで手動で変更するものではない)。
-     */
     public enum Status {
-        NOT_ARRIVED,        // 未入荷
-        PARTIALLY_ARRIVED,  // 一部入荷
-        FULLY_ARRIVED       // 入荷完了
+        NOT_ARRIVED,        // 未入荷(まだ何も届いていない)
+        PARTIALLY_ARRIVED,  // 一部入荷(発注数量の一部だけ合格済み)
+        FULLY_ARRIVED       // 入荷完了(発注数量分すべて合格済み)
     }
 
-    private Long orderId;
-    private Long materialId;
-    private String supplierId;
-    private BigDecimal orderQty;
-    private LocalDate orderDate;
-    private LocalDate expectedDate;
+    private Long orderId;             // 主キー
+    private Long materialId;          // 発注対象の材料(material.materialIdを参照)
+    private String supplierId;        // 仕入先(現状は文字列管理。将来supplierマスタに分離してもよい)
+    private BigDecimal orderQty;      // 発注数量(g または ml)
+    private LocalDate orderDate;      // 発注日
+    private LocalDate expectedDate;   // 納品予定日(仕入先から明言されないこともあるためnull許容)
 
-    // フィールド自体に初期値を持たせている点がポイント。
-    //
-    // 以前は「引数付きのコンストラクタの中でNOT_ARRIVEDを設定する」という書き方をしていたが、
-    // Jackson(JSON→Javaオブジェクトの変換を行うライブラリ)がリクエストボディを変換する際は
-    // 「引数なしのコンストラクタでまず空のオブジェクトを作り、その後setterで値を詰めていく」
-    // という動き方をするため、引数付きのコンストラクタは一切呼ばれない。
-    // その結果、JSONの中にstatusという項目が含まれていない場合、
-    // statusフィールドは初期化されないまま(=null)残ってしまい、
-    // NOT NULL制約のあるDB列に対してnullを送ろうとしてエラーになっていた。
-    //
-    // フィールド宣言の時点で初期値を持たせておけば、
-    // 「引数なしコンストラクタ経由で作られる場合」を含め、常にこの初期値からスタートするため、
-    // このような抜けが起きない。
-    private Status status = Status.NOT_ARRIVED;
+    // フィールド宣言時点で初期値を持たせている(理由は下記コメント参照)。
+    private Status status = Status.NOT_ARRIVED; // 発注の充足状況。Service層が入荷実績から自動算出・更新する
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private LocalDateTime createdAt;  // 登録日時(DB側で自動設定)
+    private LocalDateTime updatedAt;  // 更新日時(DB側で自動設定)
 
     public MaterialOrder() {
     }
@@ -57,6 +40,8 @@ public class MaterialOrder {
         this.orderDate = orderDate;
         this.expectedDate = expectedDate;
         // statusはフィールド宣言時点で既にNOT_ARRIVEDになっているため、ここでの再設定は不要。
+        // (JacksonがJSON→Javaオブジェクト変換時に引数なしコンストラクタ経由で作るため、
+        //  この引数付きコンストラクタは実際にはAPI経由では呼ばれない。詳細は下記参照)
     }
 
     public Long getOrderId() {

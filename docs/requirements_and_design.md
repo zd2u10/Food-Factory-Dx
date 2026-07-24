@@ -266,7 +266,7 @@ DRAFT → PLAN → MANUFACTURING → COMPLETED(通常/軽微な不良を含む)
 |---|---|---|---|
 | 0 | 基盤マスタ(材料・商品・レシピ) | material, material_package_spec, items, recipe_item | 実装済み |
 | 1 | 材料調達(発注〜入荷〜在庫化) | material_order, material_arrival, material_arrival_line, material_lot | 実装済み |
-| 2 | 製造管理(コア機能、手動Draft〜完了) | manufacturing_batch, batch_material_usage | 未着手 |
+| 2 | 製造管理(コア機能、手動Draft〜完了) | manufacturing_batch, batch_material_usage | 先行実装済み(未検証) |
 | 3 | 保留・交換・手動調整(例外処理群) | hold_resolution, stock_adjustment | 未着手 |
 | 4 | MRP自動化 | mrp_run, manufacturing_batch.origin_type | 未着手 |
 | 5 | 注文管理(受注〜出荷) | customer, customer_order, order_line, carrier, shipment, shipment_line | 未着手 |
@@ -310,6 +310,28 @@ exception/   業務エラーを分かりやすいHTTPレスポンスに変換す
   直接持たせていなかったため追加した。ロット番号自体は`material_arrival_line`側で
   既に人が手入力した値であり、`material_lot`はそれをコピーして持つだけで、
   新たにロット番号を採番しているわけではない
+
+### 8.5 材料ロットの同時消費対策
+
+複数のバッチが同時に同じ材料ロットを消費しようとした場合の競合(二重消費)を防ぐため、
+`MaterialLotMapper.updateRemainingQty`(読み取った値をJava側で引き算して書き戻す方式)を廃止し、
+`decrementRemainingQty`(DB側で`remaining_qty - usedQty`を直接計算し、
+`WHERE remaining_qty >= usedQty`という条件を満たす場合のみ更新する方式)に変更した。
+更新件数が0件の場合、在庫不足または競合が起きたと判断してエラーとする。
+
+### 8.4 フェーズ2実装時に置いた前提(要確認・未検証)
+
+フェーズ2(製造管理)はコードとして書き上げた段階で、実機での動作確認はまだ行っていない。
+実装にあたり、以下2点を仮の前提として置いている。
+
+- **`recipe_item.use_qty`はバッチ1回あたりの固定使用量**として扱い、
+  商品の個数(plannedQty)に比例して増減させる計算はしていない。
+  `manufacturing_batch.plannedQty`は常に`items.standard_batch_qty`と同値になる想定
+  (要件定義書 5.1節に記載していた「need = use_qty × (batch予定数量 / レシピ基準量)」という
+  計算式は、この前提と矛盾するため実装では採用していない。この点は要修正の可能性がある)
+- **完成品(商品)の在庫を追跡する仕組みはまだ実装していない**。
+  `completeBatch`で`acceptedQty`(合格数)は記録するが、`items`側の在庫として
+  反映する処理はフェーズ5(出荷管理)と合わせて設計する想定のため保留している
 
 ---
 

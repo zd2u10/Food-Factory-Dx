@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/mybatis-3/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.foodfactory.dx.mapper.ManufacturingBatchMapper">
+
+    <resultMap id="batchResultMap" type="com.foodfactory.dx.domain.ManufacturingBatch">
+        <id column="batch_id" property="batchId"/>
+        <result column="item_id" property="itemId"/>
+        <result column="mrp_run_id" property="mrpRunId"/>
+        <result column="batch_date" property="batchDate"/>
+        <result column="batch_seq" property="batchSeq"/>
+        <result column="status" property="status"/>
+        <result column="origin_type" property="originType"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="planned_qty" property="plannedQty"/>
+        <result column="produced_qty" property="producedQty"/>
+        <result column="accepted_qty" property="acceptedQty"/>
+        <result column="remaining_qty" property="remainingQty"/>
+        <result column="exceeded_plan" property="exceededPlan"/>
+        <result column="loss_qty" property="lossQty"/>
+        <result column="loss_comment" property="lossComment"/>
+        <result column="reject_comment" property="rejectComment"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.ManufacturingBatch"
+            useGeneratedKeys="true" keyProperty="batchId">
+        INSERT INTO manufacturing_batch (
+            item_id, mrp_run_id, batch_date, batch_seq, status, origin_type, created_by, planned_qty
+        )
+        VALUES (
+            #{itemId}, #{mrpRunId}, #{batchDate}, #{batchSeq}, #{status}, #{originType}, #{createdBy}, #{plannedQty}
+        )
+    </insert>
+
+    <select id="findById" resultMap="batchResultMap">
+        SELECT * FROM manufacturing_batch WHERE batch_id = #{batchId}
+    </select>
+
+    <select id="findAll" resultMap="batchResultMap">
+        SELECT * FROM manufacturing_batch ORDER BY batch_date DESC, item_id, batch_seq
+    </select>
+
+    <select id="findMaxBatchSeq" resultType="java.lang.Integer">
+        SELECT MAX(batch_seq)
+        FROM manufacturing_batch
+        WHERE item_id = #{itemId}
+          AND batch_date = #{batchDate}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE manufacturing_batch
+        SET status = #{status}
+        WHERE batch_id = #{batchId}
+    </update>
+
+    <update id="completeBatch">
+        UPDATE manufacturing_batch
+        SET status        = 'COMPLETED',
+            produced_qty  = #{producedQty},
+            accepted_qty  = #{acceptedQty},
+            remaining_qty = #{acceptedQty},
+            exceeded_plan = #{exceededPlan},
+            loss_qty      = #{lossQty},
+            loss_comment  = #{lossComment}
+        WHERE batch_id = #{batchId}
+    </update>
+
+    <update id="rejectBatch">
+        UPDATE manufacturing_batch
+        SET status         = 'REJECTED',
+            reject_comment = #{rejectComment}
+        WHERE batch_id = #{batchId}
+    </update>
+
+</mapper>
