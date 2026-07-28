@@ -13,8 +13,5 @@ public interface MaterialArrivalMapper {
 
     Optional<MaterialArrival> findById(@Param("arrivalId") Long arrivalId);
 
-    /** 特定の発注(orderId)に紐づく入荷ヘッダーを全件取得する(分納の履歴確認に使う)。 */
-    List<MaterialArrival> findByOrderId(@Param("orderId") Long orderId);
-
     List<MaterialArrival> findAll();
 }

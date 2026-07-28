@@ -9,9 +9,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 入荷ヘッダー(伝票)のController。
+ * ヘッダーは配送イベントの情報(いつ・どの仕入先か)だけを持つため、
+ * 発注(orderId)による絞り込みはヘッダー側では行わない
+ * (発注に紐づく明細を確認したい場合は MaterialArrivalLineController 側のAPIを使う)。
+ */
 @RestController
 @RequestMapping("/api/material-arrivals")
 public class MaterialArrivalController {
@@ -22,21 +27,8 @@ public class MaterialArrivalController {
         this.materialArrivalService = materialArrivalService;
     }
 
-    /**
-     * 入荷ヘッダーの一覧を取得する。
-     *
-     * @RequestParam(required = false) Long orderId:
-     *   URLの末尾に "?orderId=1" のようなクエリパラメータが付いていたらその値を受け取り、
-     *   付いていなければ null のままにする、という意味。
-     *   例:
-     *     GET /api/material-arrivals            → 全件取得
-     *     GET /api/material-arrivals?orderId=1  → orderId=1の発注に紐づく入荷だけ取得
-     */
     @GetMapping
-    public List<MaterialArrival> list(@RequestParam(required = false) Long orderId) {
-        if (orderId != null) {
-            return materialArrivalService.listByOrderId(orderId);
-        }
+    public List<MaterialArrival> list() {
         return materialArrivalService.listAll();
     }
 

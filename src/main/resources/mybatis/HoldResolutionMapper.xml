@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/mybatis-3/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.foodfactory.dx.mapper.HoldResolutionMapper">
+
+    <resultMap id="holdResultMap" type="com.foodfactory.dx.domain.HoldResolution">
+        <id column="hold_id" property="holdId"/>
+        <result column="line_id" property="lineId"/>
+        <result column="held_qty_snapshot" property="heldQtySnapshot"/>
+        <result column="resolution_type" property="resolutionType"/>
+        <result column="resolved_line_id" property="resolvedLineId"/>
+        <result column="status" property="status"/>
+        <result column="comment" property="comment"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.HoldResolution"
+            useGeneratedKeys="true" keyProperty="holdId">
+        INSERT INTO hold_resolution (line_id, held_qty_snapshot, status)
+        VALUES (#{lineId}, #{heldQtySnapshot}, #{status})
+    </insert>
+
+    <select id="findById" resultMap="holdResultMap">
+        SELECT * FROM hold_resolution WHERE hold_id = #{holdId}
+    </select>
+
+    <select id="findByStatus" resultMap="holdResultMap">
+        SELECT * FROM hold_resolution WHERE status = #{status} ORDER BY created_at
+    </select>
+
+    <update id="resolve">
+        UPDATE hold_resolution
+        SET status          = 'RESOLVED',
+            resolution_type = #{resolutionType},
+            resolved_line_id = #{resolvedLineId},
+            comment         = #{comment}
+        WHERE hold_id = #{holdId}
+    </update>
+
+</mapper>

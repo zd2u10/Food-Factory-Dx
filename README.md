@@ -251,6 +251,53 @@ Eclipse上で以下の手順ですぐに実行・確認できる。
 - `producedQty`が`acceptedQty + lossQty`と一致するか
 - `MANUFACTURING`状態でないバッチを完了しようとすると例外が飛ぶか
 
+## フェーズ1の構造変更(重要)
+
+実装を進める中で、`material_arrival`(入荷ヘッダー)に`material_id`を1つしか持たせられず、
+**1回の配送で複数の異なる材料・複数の異なる発注が混在するケースを正しく表現できない**という
+設計上の問題が見つかった。`material_id`・`order_id`はヘッダーではなく、
+明細(`material_arrival_line`)側に持たせるよう変更した。
+
+この変更に伴い、以下のAPIの挙動が変わっている。
+
+- `POST /api/material-arrivals`: リクエストボディから`materialId`/`orderId`が無くなった(`supplierId`と`arrivalDate`だけになった)
+- `POST /api/material-arrivals/{arrivalId}/lines`: リクエストボディに`materialId`(必須)・`orderId`(任意)を追加する必要がある
+- `GET /api/material-arrivals?orderId=`: 廃止。代わりに`GET /api/material-orders/{orderId}/lines`を使う
+
+**この変更に伴い、テーブル構造そのものが変わっているため、既存のテストデータはリセットが必要。**
+`sql/migration_arrival_line_restructure.sql`を実行してから、`phase1`〜`phase3`のDDLを再実行すること。
+
+## フェーズ3: 保留対応・手動在庫調整
+
+対象テーブル: `hold_resolution`, `stock_adjustment`
+(DDLは `sql/phase3_hold_adjustment_schema.sql`)
+
+### 設計のポイント
+
+- 検品で保留(`heldQty > 0`)が発生すると、`ProcurementService.registerInspectedLine()`が
+  自動的に`hold_resolution`を1件作成する(`status=ON_HOLD`)
+- 保留への対応は3パターン
+  - **返品(RETURNED)**: 在庫は増減しない。`POST /api/holds/{holdId}/resolve-returned`
+  - **交換(EXCHANGED)**: 新しい入荷明細を登録する際、`resolvesHoldId`パラメータで
+    どの保留に対する交換品かを指定する。`POST /api/material-arrivals/{arrivalId}/lines?resolvesHoldId={holdId}`
+  - **結局受け入れる(ACCEPTED_LATE)**: 保留分を合格分に繰り入れ、対応する材料ロットの残量を増やす
+    (無ければ新規作成)。増減は必ず`stock_adjustment`に記録してから反映する。
+    `POST /api/holds/{holdId}/resolve-accepted-late`
+- 在庫の手動調整(棚卸し補正等)は`POST /api/material-lots/{lotId}/adjustments`で行う。
+  `material_lot.remainingQty`を直接書き換えるAPIは無く、必ずこの経路(`stock_adjustment`記録付き)を通す
+
+### 追加されたAPI
+
+| メソッド | URL | 内容 |
+|---|---|---|
+| GET  | `/api/holds` | 対応待ち(ON_HOLD)の保留一覧 |
+| POST | `/api/holds/{holdId}/resolve-returned` | 返品として対応 |
+| POST | `/api/holds/{holdId}/resolve-accepted-late` | 結局受け入れるとして対応 |
+| GET  | `/api/material-lots/{lotId}/adjustments` | ロットの調整履歴一覧 |
+| POST | `/api/material-lots/{lotId}/adjustments` | ロットの残量を手動補正(理由コメント必須) |
+| GET  | `/api/material-orders/{orderId}/lines` | 発注に紐づく入荷明細の一覧(充足内訳の確認用) |
+| GET  | `/api/material-arrivals/{arrivalId}/lines` | 入荷ヘッダーに属する明細の一覧 |
+
 ## 次のステップ
 
 このフェーズ0はdomain/mapperまでの実装です。次に必要になるのは:

@@ -13,6 +13,8 @@ public class MaterialArrivalLine {
 
     private Long lineId;                       // 主キー
     private Long arrivalId;                     // どの入荷ヘッダー(伝票)に属するか
+    private Long materialId;                    // この明細で届いた材料(1回の配送内で複数材料が混在してもよいよう明細側に持つ)
+    private Long orderId;                       // 対応する発注(緊急入荷等、発注に紐づかない場合はnull)
     private String supplierLotNo;               // 仕入先が発行したロット番号(人が手入力する値)
     private String origin;                      // 産地
     private LocalDate expiryDate;                // 賞味期限(FEFO判定の基準になる)
@@ -48,6 +50,22 @@ public class MaterialArrivalLine {
 
     public void setArrivalId(Long arrivalId) {
         this.arrivalId = arrivalId;
+    }
+
+    public Long getMaterialId() {
+        return materialId;
+    }
+
+    public void setMaterialId(Long materialId) {
+        this.materialId = materialId;
+    }
+
+    public Long getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(Long orderId) {
+        this.orderId = orderId;
     }
 
     public String getSupplierLotNo() {

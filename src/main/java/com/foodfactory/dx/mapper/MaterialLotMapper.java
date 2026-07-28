@@ -22,6 +22,29 @@ public interface MaterialLotMapper {
     List<MaterialLot> findByMaterialIdOrderByExpiry(@Param("materialId") Long materialId);
 
     /**
+     * ロットの残量を、計算(増減)ではなく指定した値に直接上書きする。
+     * StockAdjustmentService(棚卸し等による手動補正)専用のメソッドであり、
+     * 通常の製造消費・入荷登録の経路からは呼ばない
+     * (在庫が理由なく増減しないよう、必ずstock_adjustmentへの記録とセットで使うこと)。
+     */
+    int setRemainingQty(@Param("lotId") Long lotId, @Param("remainingQty") BigDecimal remainingQty);
+
+    /**
+     * 特定の入荷明細(arrivalLineId)から生成されたロットを取得する。
+     * 1明細につきロットは1件までという制約(UNIQUE制約)があるため、Optionalで返す。
+     * 「結局受け入れる(ACCEPTED_LATE)」対応で、既存ロットに残量を追加すべきか、
+     * 新規にロットを作るべきかを判定するために使う。
+     */
+    Optional<MaterialLot> findByArrivalLineId(@Param("arrivalLineId") Long arrivalLineId);
+
+    /**
+     * ロットの残量を「指定した量だけ増やす」。decrementRemainingQtyの逆方向の操作。
+     * 呼び出し前に必ず stock_adjustment へ調整前後の値を記録してから呼ぶ運用にする
+     * (在庫が理由なく増減した記録が残らない、という事態を避けるため)。
+     */
+    int incrementRemainingQty(@Param("lotId") Long lotId, @Param("addQty") BigDecimal addQty);
+
+    /**
      * ロットの残量を「指定した量だけ減らす」。読み取った値をJava側で引き算するのではなく、
      * DB側で「remaining_qty - usedQty」を1回のSQLで直接計算させる方式にしている。
      *

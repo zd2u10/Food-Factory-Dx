@@ -5,15 +5,14 @@ import java.time.LocalDateTime;
 
 /**
  * 入荷ヘッダー(伝票1枚 = 1回の配送イベント)。
- * 実際のロット情報(産地・賞味期限・数量)はここではなく、
- * このヘッダーに複数ぶら下がる material_arrival_line 側が持つ。
+ * 1回の配送で複数の異なる材料・複数の異なる発注がまとめて届くことがあるため、
+ * materialId/orderIdはこのヘッダーではなく、明細(MaterialArrivalLine)側に持たせる。
+ * ヘッダーは「いつ・どの仕入先から届いたか」という配送イベントの情報だけを持つ。
  */
 public class MaterialArrival {
 
-    private Long arrivalId;    // 主キー
-    private Long orderId;      // 対応する発注(緊急入荷等、発注に紐づかない場合はnull)
-    private Long materialId;   // 入荷した材料。発注に紐づく場合は発注側の値がService層で自動コピーされる
-    private String supplierId; // 仕入先
+    private Long arrivalId;          // 主キー
+    private String supplierId;       // 仕入先
     private LocalDate arrivalDate;   // 入荷日(伝票の日付)
     private LocalDateTime createdAt; // 登録日時(DB側で自動設定)
     private LocalDateTime updatedAt; // 更新日時(DB側で自動設定)
@@ -21,9 +20,7 @@ public class MaterialArrival {
     public MaterialArrival() {
     }
 
-    public MaterialArrival(Long orderId, Long materialId, String supplierId, LocalDate arrivalDate) {
-        this.orderId = orderId;
-        this.materialId = materialId;
+    public MaterialArrival(String supplierId, LocalDate arrivalDate) {
         this.supplierId = supplierId;
         this.arrivalDate = arrivalDate;
     }
@@ -34,22 +31,6 @@ public class MaterialArrival {
 
     public void setArrivalId(Long arrivalId) {
         this.arrivalId = arrivalId;
-    }
-
-    public Long getOrderId() {
-        return orderId;
-    }
-
-    public void setOrderId(Long orderId) {
-        this.orderId = orderId;
-    }
-
-    public Long getMaterialId() {
-        return materialId;
-    }
-
-    public void setMaterialId(Long materialId) {
-        this.materialId = materialId;
     }
 
     public String getSupplierId() {

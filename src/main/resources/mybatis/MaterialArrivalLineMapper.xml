@@ -8,6 +8,8 @@
     <resultMap id="lineResultMap" type="com.foodfactory.dx.domain.MaterialArrivalLine">
         <id column="line_id" property="lineId"/>
         <result column="arrival_id" property="arrivalId"/>
+        <result column="material_id" property="materialId"/>
+        <result column="order_id" property="orderId"/>
         <result column="supplier_lot_no" property="supplierLotNo"/>
         <result column="origin" property="origin"/>
         <result column="expiry_date" property="expiryDate"/>
@@ -27,12 +29,12 @@
     <insert id="insert" parameterType="com.foodfactory.dx.domain.MaterialArrivalLine"
             useGeneratedKeys="true" keyProperty="lineId">
         INSERT INTO material_arrival_line (
-            arrival_id, supplier_lot_no, origin, expiry_date,
+            arrival_id, material_id, order_id, supplier_lot_no, origin, expiry_date,
             package_count, package_weight_snapshot, arrived_qty, accepted_qty, held_qty,
             check_damage, check_expiry, check_contamination, exchange_source_line_id
         )
         VALUES (
-            #{arrivalId}, #{supplierLotNo}, #{origin}, #{expiryDate},
+            #{arrivalId}, #{materialId}, #{orderId}, #{supplierLotNo}, #{origin}, #{expiryDate},
             #{packageCount}, #{packageWeightSnapshot}, #{arrivedQty}, #{acceptedQty}, #{heldQty},
             #{checkDamage}, #{checkExpiry}, #{checkContamination}, #{exchangeSourceLineId}
         )
@@ -46,25 +48,19 @@
         SELECT * FROM material_arrival_line WHERE arrival_id = #{arrivalId}
     </select>
 
+    <select id="findByOrderId" resultMap="lineResultMap">
+        SELECT * FROM material_arrival_line WHERE order_id = #{orderId}
+    </select>
+
     <!--
-      2段階JOINの説明:
-        material_arrival_line (mal) : 一番知りたい accepted_qty を持っている
-        material_arrival (ma)       : malがどのarrival_idに属するかを繋ぐ中間テーブル
-        material_order (mo)         : maがどのorder_idに属するかを繋ぐ、たどり着きたい先
-
-      mal → ma → mo の順にJOINで辿ることで、
-      「特定の発注(order_id)に紐づく、全ての入荷・全ての明細」を横断して集計できる。
-
-      COALESCE(SUM(...), 0): SUM()は対象データが1件もないとNULLを返す仕様のため、
-      「まだ1件も入荷していない発注」の場合にNULLではなく0を返すよう、
-      COALESCEで「NULLだったら0に置き換える」処理を挟んでいる。
+      以前は material_arrival_line → material_arrival → material_order という
+      2段階JOINが必要だったが、order_idを明細側に直接持たせたことで
+      1テーブルへのWHERE集計だけで済むようになった。
     -->
     <select id="sumAcceptedQtyByOrderId" resultType="java.math.BigDecimal">
-        SELECT COALESCE(SUM(mal.accepted_qty), 0)
-        FROM material_arrival_line mal
-                 JOIN material_arrival ma ON mal.arrival_id = ma.arrival_id
-                 JOIN material_order mo ON ma.order_id = mo.order_id
-        WHERE mo.order_id = #{orderId}
+        SELECT COALESCE(SUM(accepted_qty), 0)
+        FROM material_arrival_line
+        WHERE order_id = #{orderId}
     </select>
 
     <update id="updateInspectionResult" parameterType="com.foodfactory.dx.domain.MaterialArrivalLine">

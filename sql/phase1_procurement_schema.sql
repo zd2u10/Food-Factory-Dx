@@ -30,34 +30,31 @@ CREATE TABLE material_order (
 
 -- -----------------------------------------------------
 -- 入荷ヘッダー(伝票1枚 = 1回の配送イベント)
--- 発注に対して複数回届く(分納)ことがあるため、1つのorder_idに対して
--- 複数のmaterial_arrivalが紐づくことを想定している(1対多)。
--- 発注に紐づかない緊急入荷も想定し、order_idはNULLを許容する。
+-- 1回の配送で複数の異なる材料・複数の異なる発注がまとめて届くことがあるため、
+-- material_id/order_idはこのヘッダーではなく、明細(material_arrival_line)側に持たせる。
+-- ヘッダーは「いつ・どの仕入先から届いたか」という配送イベントの情報だけを持つ。
 -- -----------------------------------------------------
 CREATE TABLE material_arrival (
   arrival_id     BIGINT AUTO_INCREMENT PRIMARY KEY,
-  order_id       BIGINT NULL COMMENT '対応する発注(緊急入荷等、発注なしの場合はNULL)',
-  material_id    BIGINT NOT NULL COMMENT '入荷した材料。発注がある場合はorder側と同じ値になる',
   supplier_id    VARCHAR(100) NOT NULL,
   arrival_date   DATE NOT NULL,
   created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT fk_ma_order
-    FOREIGN KEY (order_id) REFERENCES material_order (order_id),
-  CONSTRAINT fk_ma_material
-    FOREIGN KEY (material_id) REFERENCES material (material_id)
+  updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- -----------------------------------------------------
 -- 入荷明細(ロット単位)
 -- 1回の伝票(material_arrival)の中に、産地・賞味期限・仕入先ロット番号が異なる
--- 複数のロットが混在するケースがあるため、明細として分割して持つ。
+-- 複数のロットが混在するケースや、そもそも異なる材料・異なる発注が混在するケースがあるため、
+-- material_id/order_idはこの明細単位で持つ。
 -- 検品(破損・期限切れ・異物混入)はこの明細単位で行い、
 -- 同じ明細の中でも合格数量(accepted_qty)と保留数量(held_qty)を分けて記録する。
 -- -----------------------------------------------------
 CREATE TABLE material_arrival_line (
   line_id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
   arrival_id                 BIGINT NOT NULL,
+  material_id                BIGINT NOT NULL COMMENT 'この明細で届いた材料。1回の配送内で複数材料が混在してもよいよう明細側に持つ',
+  order_id                   BIGINT NULL COMMENT '対応する発注(緊急入荷等、発注に紐づかない場合はNULL)。1回の配送内で複数発注が混在してもよいよう明細側に持つ',
   supplier_lot_no            VARCHAR(100) NOT NULL COMMENT '仕入先が発行したロット番号',
   origin                     VARCHAR(100) NOT NULL COMMENT '産地(原料の場合)。添加物は仕入先区分などを入れる',
   expiry_date                DATE NOT NULL COMMENT '賞味期限(FEFO判定の基準になる)',
@@ -74,6 +71,10 @@ CREATE TABLE material_arrival_line (
   updated_at                 TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_mal_arrival
     FOREIGN KEY (arrival_id) REFERENCES material_arrival (arrival_id),
+  CONSTRAINT fk_mal_material
+    FOREIGN KEY (material_id) REFERENCES material (material_id),
+  CONSTRAINT fk_mal_order
+    FOREIGN KEY (order_id) REFERENCES material_order (order_id),
   CONSTRAINT fk_mal_exchange_source
     FOREIGN KEY (exchange_source_line_id) REFERENCES material_arrival_line (line_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

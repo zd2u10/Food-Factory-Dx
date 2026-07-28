@@ -17,18 +17,18 @@ public interface MaterialArrivalLineMapper {
     /** 特定の入荷ヘッダー(arrivalId)に属する明細を全件取得する。 */
     List<MaterialArrivalLine> findByArrivalId(@Param("arrivalId") Long arrivalId);
 
+    /** 特定の発注(orderId)に紐づく明細を全件取得する(orderIdが明細側に移ったため、直接1段階で取得できる)。 */
+    List<MaterialArrivalLine> findByOrderId(@Param("orderId") Long orderId);
+
     /**
      * 特定の発注(orderId)に対して、これまでに検品合格した数量の合計を取得する。
      *
-     * 発注(material_order) 1件に対して、入荷ヘッダー(material_arrival)が複数(分納)、
-     * さらにその入荷ヘッダーの下に明細(material_arrival_line)が複数、という3階層構造のため、
-     * 「発注が今どれだけ充足されているか」を知るには
-     * material_arrival_line → material_arrival → material_order と2段階JOINして
-     * accepted_qty を合計する必要がある。
+     * orderIdを明細(material_arrival_line)側に直接持たせたことで、
+     * 以前必要だった material_arrival 経由のJOINが不要になり、1テーブルへのWHERE集計だけで済む
+     * (1回の配送に複数の異なる発注・異なる材料が混在しても、明細ごとに正しく区別できる)。
      *
      * 戻り値がBigDecimalなのは、該当する明細が1件もない場合にSQLのSUM()がNULLを返すため、
-     * 呼び出し側でnullチェックが必要になることを型で示すため
-     * (int等のプリミティブ型では表現できない)。
+     * 呼び出し側でnullチェックが必要になることを型で示すため。
      */
     BigDecimal sumAcceptedQtyByOrderId(@Param("orderId") Long orderId);
 

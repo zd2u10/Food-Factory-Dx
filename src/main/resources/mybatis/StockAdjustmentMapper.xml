@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/mybatis-3/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.foodfactory.dx.mapper.StockAdjustmentMapper">
+
+    <resultMap id="adjustmentResultMap" type="com.foodfactory.dx.domain.StockAdjustment">
+        <id column="adjustment_id" property="adjustmentId"/>
+        <result column="lot_id" property="lotId"/>
+        <result column="before_qty" property="beforeQty"/>
+        <result column="after_qty" property="afterQty"/>
+        <result column="adjustment_date" property="adjustmentDate"/>
+        <result column="comment" property="comment"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.StockAdjustment"
+            useGeneratedKeys="true" keyProperty="adjustmentId">
+        INSERT INTO stock_adjustment (lot_id, before_qty, after_qty, adjustment_date, comment)
+        VALUES (#{lotId}, #{beforeQty}, #{afterQty}, #{adjustmentDate}, #{comment})
+    </insert>
+
+    <select id="findByLotId" resultMap="adjustmentResultMap">
+        SELECT * FROM stock_adjustment WHERE lot_id = #{lotId} ORDER BY created_at
+    </select>
+
+</mapper>

@@ -40,6 +40,22 @@
         ORDER BY expiry_date ASC
     </select>
 
+    <update id="setRemainingQty">
+        UPDATE material_lot
+        SET remaining_qty = #{remainingQty}
+        WHERE lot_id = #{lotId}
+    </update>
+
+    <select id="findByArrivalLineId" resultMap="lotResultMap">
+        SELECT * FROM material_lot WHERE arrival_line_id = #{arrivalLineId}
+    </select>
+
+    <update id="incrementRemainingQty">
+        UPDATE material_lot
+        SET remaining_qty = remaining_qty + #{addQty}
+        WHERE lot_id = #{lotId}
+    </update>
+
     <!--
       remaining_qty = remaining_qty - #{usedQty} という「DB側での引き算」がポイント。
       Java側で事前に読み取った値を書き戻すのではなく、

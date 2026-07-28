@@ -267,7 +267,7 @@ DRAFT → PLAN → MANUFACTURING → COMPLETED(通常/軽微な不良を含む)
 | 0 | 基盤マスタ(材料・商品・レシピ) | material, material_package_spec, items, recipe_item | 実装済み |
 | 1 | 材料調達(発注〜入荷〜在庫化) | material_order, material_arrival, material_arrival_line, material_lot | 実装済み |
 | 2 | 製造管理(コア機能、手動Draft〜完了) | manufacturing_batch, batch_material_usage | 先行実装済み(未検証) |
-| 3 | 保留・交換・手動調整(例外処理群) | hold_resolution, stock_adjustment | 未着手 |
+| 3 | 保留・交換・手動調整(例外処理群) | hold_resolution, stock_adjustment | 実装済み(未検証) |
 | 4 | MRP自動化 | mrp_run, manufacturing_batch.origin_type | 未着手 |
 | 5 | 注文管理(受注〜出荷) | customer, customer_order, order_line, carrier, shipment, shipment_line | 未着手 |
 | 6 | 残存期限ルール・出荷FEFOの高度化 | customer.required_residual_ratio | 未着手 |
@@ -319,7 +319,35 @@ exception/   業務エラーを分かりやすいHTTPレスポンスに変換す
 `WHERE remaining_qty >= usedQty`という条件を満たす場合のみ更新する方式)に変更した。
 更新件数が0件の場合、在庫不足または競合が起きたと判断してエラーとする。
 
-### 8.4 フェーズ2実装時に置いた前提(要確認・未検証)
+### 8.6 フェーズ1の構造変更:material_id/order_idを明細側へ移動
+
+実装中に、`material_arrival`(入荷ヘッダー)に`material_id`を1つしか持たせられず、
+**1回の配送で複数の異なる材料・複数の異なる発注が混在するケースを正しく表現できない**という
+設計上の問題が見つかった。`material_id`・`order_id`はヘッダーではなく、
+明細(`material_arrival_line`)側に持たせるよう変更した。ヘッダーは配送イベントの情報
+(いつ・どの仕入先から届いたか)だけを持つ。
+
+この修正により、以前の実装(ヘッダーのmaterialIdをそのまま使って材料ロットを生成するロジック)に
+既にあった潜在バグ(1回の配送に複数材料が混在した場合、誤ったmaterial_idでロットが
+生成されてしまう)も同時に解消された。フェーズ2・5(製造・出荷)のトレーサビリティ経路
+(manufacturing_batch → batch_material_usage → material_lot)は、
+material_arrivalヘッダーを経由しないため、この構造変更による影響は受けない。
+
+### 8.7 フェーズ3:保留対応・手動在庫調整の設計
+
+- 検品で保留(heldQty > 0)が発生すると、入荷明細登録時に自動的にhold_resolutionが
+  ON_HOLD状態で1件作成される
+- hold_resolutionには保留発生時点の数量スナップショット(held_qty_snapshot)を持たせている。
+  理由は、対応確定時に元明細のheldQtyを0に書き換えるため、書き換え後も
+  「保留時点でいくつだったか」を追跡できるようにするため
+- 対応は3パターン: 返品(在庫増減なし)/交換(新しい入荷明細の登録として表現)/
+  結局受け入れる(保留分を合格分に繰り入れ、対応する材料ロットの残量を増やす)
+- 「結局受け入れる」でロットの残量を増やす際は、必ずstock_adjustmentに調整前後の値を
+  記録してから反映する(在庫が理由なく増減した記録が残らない事態を避けるため)
+- material_lot.remainingQtyを直接書き換えるAPIは用意せず、
+  手動調整(棚卸し補正等)も含めて必ずstock_adjustment記録を伴う経路を通す
+
+
 
 フェーズ2(製造管理)はコードとして書き上げた段階で、実機での動作確認はまだ行っていない。
 実装にあたり、以下2点を仮の前提として置いている。
