@@ -298,6 +298,34 @@ Eclipse上で以下の手順ですぐに実行・確認できる。
 | GET  | `/api/material-orders/{orderId}/lines` | 発注に紐づく入荷明細の一覧(充足内訳の確認用) |
 | GET  | `/api/material-arrivals/{arrivalId}/lines` | 入荷ヘッダーに属する明細の一覧 |
 
+## フェーズ5: 注文管理・出荷
+
+対象テーブル: `customer`, `carrier`, `customer_order`, `order_line`, `shipment`, `shipment_line`
+(DDLは `sql/phase5_order_shipment_schema.sql`)
+
+### 設計のポイント
+
+- 出荷のFEFO選定は、材料側(産地フィルター)と同じ考え方で、取引先の残存期限ルール
+  (`customer.requiredResidualRatio`)を満たさないバッチは現場判断での代替を許可せず、
+  候補から除外する
+- `manufacturing_batch.remainingQty`は、材料ロットと同じ「条件付きDB更新」方式で減算する
+  (`decrementRemainingQty`。同時出荷による二重出荷を防ぐ)
+- 受注のキャンセルは在庫プール型(ステータス変更のみ、バッチとの紐付け解除処理は不要)
+
+### 追加されたAPI
+
+| メソッド | URL | 内容 |
+|---|---|---|
+| GET/POST | `/api/customers` | 取引先の一覧取得・登録 |
+| GET/POST | `/api/carriers` | 配送会社の一覧取得・登録 |
+| GET/POST | `/api/customer-orders` | 受注の一覧取得・登録 |
+| POST | `/api/customer-orders/{orderId}/confirm` | 受注確定(NEW→CONFIRMED) |
+| POST | `/api/customer-orders/{orderId}/cancel` | 受注キャンセル |
+| GET/POST | `/api/customer-orders/{orderId}/lines` | 受注明細の一覧取得・登録 |
+| GET/POST | `/api/shipments` | 出荷ヘッダーの一覧取得・登録 |
+| GET | `/api/order-lines/{orderLineId}/shipment-preview` | 出荷FEFO自動選定のプレビュー |
+| POST | `/api/shipments/{shipmentId}/lines` | 出荷明細登録(バッチ残量を減算) |
+
 ## 次のステップ
 
 このフェーズ0はdomain/mapperまでの実装です。次に必要になるのは:

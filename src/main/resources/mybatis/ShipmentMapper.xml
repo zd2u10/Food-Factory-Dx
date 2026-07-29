@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/mybatis-3/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.foodfactory.dx.mapper.ShipmentMapper">
+
+    <resultMap id="shipmentResultMap" type="com.foodfactory.dx.domain.Shipment">
+        <id column="shipment_id" property="shipmentId"/>
+        <result column="carrier_id" property="carrierId"/>
+        <result column="shipped_date" property="shippedDate"/>
+        <result column="destination" property="destination"/>
+        <result column="temperature_zone" property="temperatureZone"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.Shipment"
+            useGeneratedKeys="true" keyProperty="shipmentId">
+        INSERT INTO shipment (carrier_id, shipped_date, destination, temperature_zone)
+        VALUES (#{carrierId}, #{shippedDate}, #{destination}, #{temperatureZone})
+    </insert>
+
+    <select id="findById" resultMap="shipmentResultMap">
+        SELECT * FROM shipment WHERE shipment_id = #{shipmentId}
+    </select>
+
+    <select id="findAll" resultMap="shipmentResultMap">
+        SELECT * FROM shipment ORDER BY shipment_id
+    </select>
+
+</mapper>

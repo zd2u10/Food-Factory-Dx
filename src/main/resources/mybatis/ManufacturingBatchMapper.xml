@@ -76,4 +76,20 @@
         WHERE batch_id = #{batchId}
     </update>
 
+    <select id="findShippableByItemIdOrderByBatchDate" resultMap="batchResultMap">
+        SELECT *
+        FROM manufacturing_batch
+        WHERE item_id = #{itemId}
+          AND status = 'COMPLETED'
+          AND remaining_qty > 0
+        ORDER BY batch_date ASC, batch_seq ASC
+    </select>
+
+    <update id="decrementRemainingQty">
+        UPDATE manufacturing_batch
+        SET remaining_qty = remaining_qty - #{shippedQty}
+        WHERE batch_id = #{batchId}
+          AND remaining_qty >= #{shippedQty}
+    </update>
+
 </mapper>

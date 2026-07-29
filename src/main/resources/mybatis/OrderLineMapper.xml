@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/mybatis-3/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.foodfactory.dx.mapper.OrderLineMapper">
+
+    <resultMap id="orderLineResultMap" type="com.foodfactory.dx.domain.OrderLine">
+        <id column="line_id" property="lineId"/>
+        <result column="order_id" property="orderId"/>
+        <result column="item_id" property="itemId"/>
+        <result column="qty" property="qty"/>
+        <result column="unit_price" property="unitPrice"/>
+        <result column="amount" property="amount"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.OrderLine"
+            useGeneratedKeys="true" keyProperty="lineId">
+        INSERT INTO order_line (order_id, item_id, qty, unit_price, amount)
+        VALUES (#{orderId}, #{itemId}, #{qty}, #{unitPrice}, #{amount})
+    </insert>
+
+    <select id="findById" resultMap="orderLineResultMap">
+        SELECT * FROM order_line WHERE line_id = #{lineId}
+    </select>
+
+    <select id="findByOrderId" resultMap="orderLineResultMap">
+        SELECT * FROM order_line WHERE order_id = #{orderId}
+    </select>
+
+    <select id="sumQtyByOrderId" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(qty), 0)
+        FROM order_line
+        WHERE order_id = #{orderId}
+    </select>
+
+</mapper>

@@ -41,4 +41,22 @@ public interface ManufacturingBatchMapper {
 
     /** 重大な異常によりバッチ全体を破棄する場合の専用メソッド。ステータスをREJECTEDにする。 */
     int rejectBatch(@Param("batchId") Long batchId, @Param("rejectComment") String rejectComment);
+
+    /**
+     * 指定した商品の、出荷可能なバッチ(COMPLETED、remainingQty > 0)を、
+     * 製造日が古い順に取得する。
+     *
+     * 商品の賞味期限は「製造日(batchDate) + items.shelfLifeDays」で決まり、
+     * shelfLifeDaysは商品ごとに固定値のため、製造日が古い順に並べることが
+     * そのまま「期限が近い順(FEFO)」の並び順と一致する
+     * (材料側のfindByMaterialIdOrderByExpiryと同じ考え方)。
+     */
+    List<ManufacturingBatch> findShippableByItemIdOrderByBatchDate(@Param("itemId") Long itemId);
+
+    /**
+     * バッチの残量を「指定した量だけ減らす」。material_lotのdecrementRemainingQtyと同じ考え方で、
+     * DB側の条件付き更新(remaining_qty >= shippedQty)により、同時出荷時の二重出荷を防ぐ。
+     * 更新件数が0件の場合、呼び出し側は在庫不足または競合と判断してエラーにする。
+     */
+    int decrementRemainingQty(@Param("batchId") Long batchId, @Param("shippedQty") BigDecimal shippedQty);
 }
