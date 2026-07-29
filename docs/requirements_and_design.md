@@ -269,7 +269,7 @@ DRAFT → PLAN → MANUFACTURING → COMPLETED(通常/軽微な不良を含む)
 | 2 | 製造管理(コア機能、手動Draft〜完了) | manufacturing_batch, batch_material_usage | 先行実装済み(未検証) |
 | 3 | 保留・交換・手動調整(例外処理群) | hold_resolution, stock_adjustment | 実装済み(未検証) |
 | 4 | MRP自動化 | mrp_run, manufacturing_batch.origin_type | 未着手 |
-| 5 | 注文管理(受注〜出荷) | customer, customer_order, order_line, carrier, shipment, shipment_line | 未着手 |
+| 5 | 注文管理(受注〜出荷) | customer, customer_order, order_line, carrier, shipment, shipment_line | 実装済み(未検証) |
 | 6 | 残存期限ルール・出荷FEFOの高度化 | customer.required_residual_ratio | 未着手 |
 
 フェーズ2のFEFO計算ロジックは、UI実装より先にロジック単体での検証を推奨する。

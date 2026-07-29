@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/mybatis-3/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.foodfactory.dx.mapper.CarrierMapper">
+
+    <resultMap id="carrierResultMap" type="com.foodfactory.dx.domain.Carrier">
+        <id column="carrier_id" property="carrierId"/>
+        <result column="name" property="name"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.Carrier"
+            useGeneratedKeys="true" keyProperty="carrierId">
+        INSERT INTO carrier (name)
+        VALUES (#{name})
+    </insert>
+
+    <select id="findById" resultMap="carrierResultMap">
+        SELECT * FROM carrier WHERE carrier_id = #{carrierId}
+    </select>
+
+    <select id="findAll" resultMap="carrierResultMap">
+        SELECT * FROM carrier ORDER BY carrier_id
+    </select>
+
+</mapper>
