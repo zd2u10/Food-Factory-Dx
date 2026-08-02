@@ -19,7 +19,7 @@ CREATE TABLE manufacturing_batch (
   mrp_run_id      BIGINT NULL COMMENT 'フェーズ4で使用予定。現時点ではmrp_runテーブル未実装のためFK制約なし',
   batch_date      DATE NOT NULL,
   batch_seq       INT NOT NULL COMMENT 'その日・その商品の何バッチ目か(1から始まる連番)',
-  status          ENUM('DRAFT', 'PLAN', 'MANUFACTURING', 'COMPLETED', 'REJECTED')
+  status          ENUM('DRAFT', 'PLAN', 'MANUFACTURING', 'COMPLETED', 'REJECTED', 'CANCELLED')
                   NOT NULL DEFAULT 'DRAFT',
   origin_type     ENUM('MRP_AUTO', 'MANUAL') NOT NULL DEFAULT 'MANUAL'
                   COMMENT 'フェーズ2時点ではMRP自動化が未実装のため、常にMANUALになる',
@@ -32,6 +32,7 @@ CREATE TABLE manufacturing_batch (
   loss_qty        DECIMAL(10, 2) NULL COMMENT '完了時に確定する軽微な不良数',
   loss_comment    VARCHAR(255) NULL,
   reject_comment  VARCHAR(255) NULL COMMENT 'REJECTEDになった場合の理由',
+  cancel_comment  VARCHAR(255) NULL COMMENT 'CANCELLEDになった場合の理由(製造開始前の取り消し)',
   created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_mb_item

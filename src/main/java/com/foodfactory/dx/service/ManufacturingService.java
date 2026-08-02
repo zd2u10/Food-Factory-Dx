@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,14 +29,18 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * バッチのライフサイクル:
  *   DRAFT --confirmPlan--> PLAN --execute--> MANUFACTURING --complete--> COMPLETED
- *                                                          \--reject--> REJECTED
+ *          \--cancel--> CANCELLED           \--reject--> REJECTED
  *
- * 【前提として置いている仮定(要件定義書 8.3節と合わせて確認したい点)】
+ * 【前提として置いている仮定(要件定義書 8.4節を参照)】
  * recipe_item.use_qty は「商品1個あたりの使用量」ではなく、
- * 「そのバッチを1回実行するために必要な固定量」として扱っている
- * (例: 主原料15kgを1バッチにつき1袋使う、という決定に基づく)。
- * そのため、バッチの計画数量(plannedQty)を変えても、FEFOで引き当てる必要量(need)は
- * 変化させず、常にrecipe_item.use_qtyをそのまま使う。
+ * 「そのバッチを1回実行するために必要な固定量」として扱っている。
+ *
+ * 【MrpServiceとの循環依存について】
+ * MrpServiceはバッチ作成のために本クラス(ManufacturingService)に依存する。
+ * 一方、本クラスはCANCELLED/REJECTED発生時にMRPを即座に再計算したいため、
+ * MrpServiceを呼び出す必要がある。このままでは「AがBを呼び、BもAを呼ぶ」という
+ * 循環依存になりSpringがBean生成に失敗するため、MrpServiceの注入だけ
+ * @Lazy(遅延初期化)にすることで、循環を解消している。
  */
 @Service
 public class ManufacturingService {
@@ -46,28 +51,48 @@ public class ManufacturingService {
     private final RecipeItemMapper recipeItemMapper;
     private final MaterialMapper materialMapper;
     private final MaterialLotMapper materialLotMapper;
+    private final MrpService mrpService;
 
     public ManufacturingService(ManufacturingBatchMapper manufacturingBatchMapper,
                                  BatchMaterialUsageMapper batchMaterialUsageMapper,
                                  ItemMapper itemMapper,
                                  RecipeItemMapper recipeItemMapper,
                                  MaterialMapper materialMapper,
-                                 MaterialLotMapper materialLotMapper) {
+                                 MaterialLotMapper materialLotMapper,
+                                 @Lazy MrpService mrpService) {
         this.manufacturingBatchMapper = manufacturingBatchMapper;
         this.batchMaterialUsageMapper = batchMaterialUsageMapper;
         this.itemMapper = itemMapper;
         this.recipeItemMapper = recipeItemMapper;
         this.materialMapper = materialMapper;
         this.materialLotMapper = materialLotMapper;
+        this.mrpService = mrpService;
     }
 
     /**
-     * 製造バッチを新規作成する(DRAFTまたはPLAN、手動追加)。
+     * 製造バッチを新規作成する(DRAFT、手動追加)。
      * plannedQtyは商品マスタのstandardBatchQtyをそのまま採用する
      * (フェーズ0で「縮小バッチは作らない」と決めたため、常に標準量で固定)。
      */
     @Transactional
     public ManufacturingBatch createBatch(Long itemId, LocalDate batchDate, String createdBy) {
+        return buildAndInsertBatch(itemId, batchDate, createdBy,
+                ManufacturingBatch.OriginType.MANUAL, null);
+    }
+
+    /**
+     * MRPが自動生成するバッチを作成する(DRAFT、MRP_AUTO)。
+     * MrpServiceから呼ばれる想定。createBatchとほぼ同じだが、
+     * originType/mrpRunIdが異なる点だけを区別するため、共通のbuildAndInsertBatchに集約している。
+     */
+    @Transactional
+    public ManufacturingBatch createAutoBatch(Long itemId, LocalDate batchDate, Long mrpRunId) {
+        return buildAndInsertBatch(itemId, batchDate, null,
+                ManufacturingBatch.OriginType.MRP_AUTO, mrpRunId);
+    }
+
+    private ManufacturingBatch buildAndInsertBatch(Long itemId, LocalDate batchDate, String createdBy,
+                                                     ManufacturingBatch.OriginType originType, Long mrpRunId) {
         Item item = itemMapper.findById(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("指定された商品が見つかりません: itemId=" + itemId));
 
@@ -80,8 +105,9 @@ public class ManufacturingService {
         batch.setBatchSeq(nextSeq);
         batch.setCreatedBy(createdBy);
         batch.setPlannedQty(item.getStandardBatchQty());
-        // status/originTypeはフィールドの初期値(DRAFT/MANUAL)のまま使う。
-        // フェーズ2時点ではMRP自動化(フェーズ4)が無いため、originTypeは常にMANUALになる。
+        batch.setOriginType(originType);
+        batch.setMrpRunId(mrpRunId);
+        // statusはフィールドの初期値(DRAFT)のまま使う。
 
         manufacturingBatchMapper.insert(batch);
         return batch;
@@ -99,12 +125,28 @@ public class ManufacturingService {
     }
 
     /**
+     * 製造開始前のバッチを取り消す(DRAFT/PLAN → CANCELLED)。
+     *
+     * 取り消した瞬間、そのバッチが供給予定量から消えることになるため、
+     * MRPを即座に再計算(EVENTトリガー)し、本当は不足していないかをその場で確認する。
+     * これにより「キャンセルしたのに、次のMRP定期実行まで不足に気づかない」という
+     * タイムラグを実質的になくしている。
+     */
+    @Transactional
+    public void cancelBatch(Long batchId, String cancelComment) {
+        ManufacturingBatch batch = getBatchOrThrow(batchId);
+        if (batch.getStatus() != ManufacturingBatch.Status.DRAFT
+                && batch.getStatus() != ManufacturingBatch.Status.PLAN) {
+            throw new IllegalStateException(
+                    "DRAFTまたはPLAN状態のバッチのみ取り消せます。現在の状態: " + batch.getStatus());
+        }
+        manufacturingBatchMapper.cancelBatch(batchId, cancelComment);
+        mrpService.runForItem(batch.getItemId(), com.foodfactory.dx.domain.MrpRun.TriggeredBy.EVENT);
+    }
+
+    /**
      * 指定した商品のレシピをもとに、FEFO(期限が近い順)で材料を自動選定する。
      * このメソッド自体はDBを変更しない(在庫を減らしたりはしない)、あくまで「計算結果のプレビュー」。
-     *
-     * 産地制約(allowedOrigins)を満たすロットだけで必要量に届かない場合、
-     * shortage=true として返す。フェーズ0で決めた通り、この場合は現場判断での代替を許可せず、
-     * 呼び出し側(Controller)で製造実行そのものをブロックする想定。
      */
     public FefoAllocationResult previewFefoAllocation(Long itemId) {
         List<RecipeItem> recipeItems = recipeItemMapper.findByItemId(itemId);
@@ -114,8 +156,6 @@ public class ManufacturingService {
             BigDecimal need = recipeItem.getUseQty();
             List<String> allowedOrigins = recipeItem.getAllowedOriginList();
 
-            // findByMaterialIdOrderByExpiryは既にremaining_qty > 0のロットだけを
-            // 賞味期限が近い順に返してくれる(フェーズ1のMaterialLotMapperで実装済み)。
             List<MaterialLot> candidateLots = materialLotMapper
                     .findByMaterialIdOrderByExpiry(recipeItem.getMaterialId());
 
@@ -124,8 +164,6 @@ public class ManufacturingService {
                 if (remainingNeed.compareTo(BigDecimal.ZERO) <= 0) {
                     break;
                 }
-                // 許可産地に含まれないロットは、そもそも選定候補から除外する
-                // (産地制約は現場判断での代替を許可しないため、フィルターの外側で拾わない)。
                 if (!allowedOrigins.contains(lot.getOrigin())) {
                     continue;
                 }
@@ -148,14 +186,7 @@ public class ManufacturingService {
         return result;
     }
 
-    /**
-     * 製造を実行する(PLAN → MANUFACTURING)。
-     * 作業員が実際に入力した使用量(actualUsages)をもとに、各材料ロットの残量を減らし、
-     * バッチ材料使用記録を残す。
-     *
-     * @Transactional: 複数ロットの残量更新+使用記録の登録+ステータス更新を、
-     *   一つのまとまりとして扱う。途中で1つでも失敗したら全て取り消す。
-     */
+    /** 製造を実行する(PLAN → MANUFACTURING)。 */
     @Transactional
     public void executeBatch(Long batchId, List<ActualUsageInput> actualUsages) {
         ManufacturingBatch batch = getBatchOrThrow(batchId);
@@ -164,9 +195,6 @@ public class ManufacturingService {
                     "PLAN状態のバッチのみ実行できます。現在の状態: " + batch.getStatus());
         }
 
-        // 記録用に理論値(FEFOの計算結果)も取得しておく。
-        // 実測値と理論値の両方を保存することで、後から計量誤差の傾向を分析できるようにする
-        // (要件定義書 3.4節「レシピ(加水率の管理)」および製造実行フローの方針に対応)。
         FefoAllocationResult preview = previewFefoAllocation(batch.getItemId());
         Map<Long, BigDecimal> suggestedByLotId = new HashMap<>();
         for (FefoAllocationLine line : preview.getLines()) {
@@ -178,12 +206,6 @@ public class ManufacturingService {
                     .orElseThrow(() -> new IllegalArgumentException(
                             "指定された材料ロットが見つかりません: lotId=" + input.getMaterialLotId()));
 
-            // ここでの残量チェックは「入力の時点で明らかにおかしい値」を早期に弾くための
-            // 補助的なチェックであり、本当の安全装置は次の decrementRemainingQty 呼び出しの
-            // WHERE句(DB側での条件付き更新)にある。
-            // このチェックだけに頼ると、チェックした直後に別の処理が同じロットを消費してしまう
-            // 「読み取ってから書き込むまでの間に割り込まれる」競合が起こり得るため、
-            // 実際の在庫の増減は必ずDB側の条件判定つきSQLで行う。
             if (lot.getRemainingQty().compareTo(input.getUsedQty()) < 0) {
                 throw new IllegalArgumentException(
                         "ロットの残量が不足しています。lotId=" + lot.getLotId()
@@ -193,8 +215,6 @@ public class ManufacturingService {
 
             int updatedRows = materialLotMapper.decrementRemainingQty(lot.getLotId(), input.getUsedQty());
             if (updatedRows == 0) {
-                // このタイミングで0件ということは、上のチェックと実際の更新の間に
-                // 別の処理が同じロットを消費し、在庫が足りなくなったことを意味する。
                 throw new IllegalArgumentException(
                         "ロットの在庫を確保できませんでした(他の処理と競合した可能性があります): lotId="
                                 + lot.getLotId());
@@ -210,17 +230,7 @@ public class ManufacturingService {
         manufacturingBatchMapper.updateStatus(batchId, ManufacturingBatch.Status.MANUFACTURING);
     }
 
-    /**
-     * 検品完了処理(MANUFACTURING → COMPLETED)。
-     * 通常運用の軽微な不良(数個レベル)はここでlossQtyとして記録し、バッチ自体は完了扱いにする。
-     *
-     * 計画数量(plannedQty)を超える生産(現場の頑張りによる効率向上など)はエラーにせず許容するが、
-     * 後から集計・分析できるよう exceededPlan フラグに記録だけ残す。
-     *
-     * 【フェーズ2時点で未実装の部分】完了した合格数量(acceptedQty)を、
-     * 商品(items)側の在庫として計上する処理はまだ無い(要件定義書8.3節の通り、
-     * 商品在庫の追跡はフェーズ5で設計する想定のため)。
-     */
+    /** 検品完了処理(MANUFACTURING → COMPLETED)。 */
     @Transactional
     public void completeBatch(Long batchId, BigDecimal acceptedQty, BigDecimal lossQty, String lossComment) {
         ManufacturingBatch batch = getBatchOrThrow(batchId);
@@ -237,10 +247,8 @@ public class ManufacturingService {
     /**
      * バッチ全体を破棄する(MANUFACTURING → REJECTED)。重大な異常が見つかった場合のみ使う。
      *
-     * 注意: 既に消費した材料(batch_material_usage)は取り消さない。
-     * 材料は物理的に既に使われてしまっているため、バッチの結果が不良品扱いになったとしても
-     * 材料の消費という事実そのものは変わらない、という考え方による
-     * (要件定義書 3.2節「廃棄・ロスの扱い」を参照)。
+     * REJECTEDになったバッチも、CANCELLEDと同様に供給予定から消えることになるため、
+     * 同じくMRPを即座に再計算する(EVENTトリガー)。
      */
     @Transactional
     public void rejectBatch(Long batchId, String rejectComment) {
@@ -250,6 +258,7 @@ public class ManufacturingService {
                     "MANUFACTURING状態のバッチのみ破棄できます。現在の状態: " + batch.getStatus());
         }
         manufacturingBatchMapper.rejectBatch(batchId, rejectComment);
+        mrpService.runForItem(batch.getItemId(), com.foodfactory.dx.domain.MrpRun.TriggeredBy.EVENT);
     }
 
     public List<ManufacturingBatch> listAll() {

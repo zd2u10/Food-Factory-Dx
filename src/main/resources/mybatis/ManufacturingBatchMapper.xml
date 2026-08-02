@@ -22,6 +22,7 @@
         <result column="loss_qty" property="lossQty"/>
         <result column="loss_comment" property="lossComment"/>
         <result column="reject_comment" property="rejectComment"/>
+        <result column="cancel_comment" property="cancelComment"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
     </resultMap>
@@ -91,5 +92,26 @@
         WHERE batch_id = #{batchId}
           AND remaining_qty >= #{shippedQty}
     </update>
+
+    <update id="cancelBatch">
+        UPDATE manufacturing_batch
+        SET status         = 'CANCELLED',
+            cancel_comment = #{cancelComment}
+        WHERE batch_id = #{batchId}
+    </update>
+
+    <select id="sumRemainingQtyByItemId" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(remaining_qty), 0)
+        FROM manufacturing_batch
+        WHERE item_id = #{itemId}
+          AND status = 'COMPLETED'
+    </select>
+
+    <select id="sumPlannedQtyByItemId" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(planned_qty), 0)
+        FROM manufacturing_batch
+        WHERE item_id = #{itemId}
+          AND status IN ('DRAFT', 'PLAN', 'MANUFACTURING')
+    </select>
 
 </mapper>

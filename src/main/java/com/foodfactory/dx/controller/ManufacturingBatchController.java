@@ -3,6 +3,7 @@ package com.foodfactory.dx.controller;
 import com.foodfactory.dx.domain.BatchMaterialUsage;
 import com.foodfactory.dx.domain.ManufacturingBatch;
 import com.foodfactory.dx.dto.ActualUsageInput;
+import com.foodfactory.dx.dto.CancelBatchRequest;
 import com.foodfactory.dx.dto.CompleteBatchRequest;
 import com.foodfactory.dx.dto.CreateBatchRequest;
 import com.foodfactory.dx.dto.FefoAllocationResult;
@@ -56,6 +57,15 @@ public class ManufacturingBatchController {
     @PostMapping("/api/batches/{batchId}/confirm-plan")
     public ResponseEntity<Void> confirmPlan(@PathVariable Long batchId) {
         manufacturingService.confirmPlan(batchId);
+        return ResponseEntity.ok().build();
+    }
+
+    /** DRAFT/PLAN → CANCELLED。製造開始前にバッチを取り消す(MRPが即座に再計算される)。 */
+    @PostMapping("/api/batches/{batchId}/cancel")
+    public ResponseEntity<Void> cancel(
+            @PathVariable Long batchId,
+            @RequestBody CancelBatchRequest request) {
+        manufacturingService.cancelBatch(batchId, request.getCancelComment());
         return ResponseEntity.ok().build();
     }
 
