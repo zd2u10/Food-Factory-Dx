@@ -3,7 +3,9 @@ package com.foodfactory.dx.controller;
 import com.foodfactory.dx.domain.BatchMaterialUsage;
 import com.foodfactory.dx.domain.ManufacturingBatch;
 import com.foodfactory.dx.dto.ActualUsageInput;
+import com.foodfactory.dx.dto.CancelBatchRequest;
 import com.foodfactory.dx.dto.CompleteBatchRequest;
+import com.foodfactory.dx.dto.ConfirmPlanBulkRequest;
 import com.foodfactory.dx.dto.CreateBatchRequest;
 import com.foodfactory.dx.dto.FefoAllocationResult;
 import com.foodfactory.dx.dto.RejectBatchRequest;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -56,6 +59,34 @@ public class ManufacturingBatchController {
     @PostMapping("/api/batches/{batchId}/confirm-plan")
     public ResponseEntity<Void> confirmPlan(@PathVariable Long batchId) {
         manufacturingService.confirmPlan(batchId);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 複数のバッチをまとめてDRAFT → PLANに確定する(一括確定)。
+     * 画面上で複数のDraftカードを選んでから、まとめて確定する操作に対応する想定。
+     */
+    @PostMapping("/api/batches/confirm-plan-bulk")
+    public ResponseEntity<Void> confirmPlanBulk(@RequestBody ConfirmPlanBulkRequest request) {
+        manufacturingService.confirmPlanBulk(request.getBatchIds());
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * status=DRAFTのまま、指定した日数以上放置されているバッチの一覧を取得する。
+     * 例: GET /api/batches/stale-drafts?days=3
+     */
+    @GetMapping("/api/batches/stale-drafts")
+    public List<ManufacturingBatch> listStaleDrafts(@RequestParam(defaultValue = "3") int days) {
+        return manufacturingService.listStaleDrafts(days);
+    }
+
+    /** DRAFT/PLAN → CANCELLED。製造開始前にバッチを取り消す(MRPが即座に再計算される)。 */
+    @PostMapping("/api/batches/{batchId}/cancel")
+    public ResponseEntity<Void> cancel(
+            @PathVariable Long batchId,
+            @RequestBody CancelBatchRequest request) {
+        manufacturingService.cancelBatch(batchId, request.getCancelComment());
         return ResponseEntity.ok().build();
     }
 

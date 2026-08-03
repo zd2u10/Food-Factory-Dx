@@ -59,4 +59,26 @@ public interface ManufacturingBatchMapper {
      * 更新件数が0件の場合、呼び出し側は在庫不足または競合と判断してエラーにする。
      */
     int decrementRemainingQty(@Param("batchId") Long batchId, @Param("shippedQty") BigDecimal shippedQty);
+
+    /** 製造開始前の取り消し専用メソッド。ステータスをCANCELLEDにする。 */
+    int cancelBatch(@Param("batchId") Long batchId, @Param("cancelComment") String cancelComment);
+
+    /**
+     * 指定した商品の、完成済み(COMPLETED)バッチの残量合計を取得する(MRPの「有効在庫」に相当)。
+     * 該当バッチが1件も無い場合はSUM()がNULLを返すため、SQL側でCOALESCEにより0に変換している。
+     */
+    BigDecimal sumRemainingQtyByItemId(@Param("itemId") Long itemId);
+
+    /**
+     * 指定した商品の、DRAFT/PLAN/MANUFACTURING状態のバッチのplannedQty合計を取得する
+     * (MRPの「供給予定量」に相当)。CANCELLED/REJECTEDは対象外のため、
+     * 取り消されたバッチが供給予定として残り続けることはない。
+     */
+    BigDecimal sumPlannedQtyByItemId(@Param("itemId") Long itemId);
+
+    /**
+     * status=DRAFTのまま、created_atからdays日以上経過しているバッチを取得する。
+     * 運用者が「対応漏れのDraft」に気づけるようにするための一覧取得用。
+     */
+    List<ManufacturingBatch> findStaleDrafts(@Param("days") int days);
 }

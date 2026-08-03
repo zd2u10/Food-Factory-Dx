@@ -326,6 +326,37 @@ Eclipse上で以下の手順ですぐに実行・確認できる。
 | GET | `/api/order-lines/{orderLineId}/shipment-preview` | 出荷FEFO自動選定のプレビュー |
 | POST | `/api/shipments/{shipmentId}/lines` | 出荷明細登録(バッチ残量を減算) |
 
+## フェーズ4: MRP自動化
+
+対象テーブル: `mrp_run`(新規)、`manufacturing_batch`(ALTER: `CANCELLED`ステータス・`cancel_comment`追加)
+(DDLは `sql/phase4_mrp_schema.sql`。既存環境にALTERで適用できる)
+
+### 計算式の修正について
+
+以前の計算式には「有効在庫を2回差し引く」二重控除の誤りがあった。標準的なMRPの
+正味所要量計算に合わせ、以下の式に修正した(要件定義書 5.2節を参照)。
+
+```
+需要量 = 受注残 + 適正在庫(そのまま)
+正味不足量 = 需要量 − (有効在庫 + 供給予定量)
+```
+
+### CANCELLEDステータスとMRPの即時再計算
+
+- `DRAFT`/`PLAN`状態のバッチは、製造開始前であれば`CANCELLED`として取り消せる
+- `CANCELLED`・`REJECTED`が発生すると、供給予定量から即座に外れることになるため、
+  `ManufacturingService`が`MrpService`を呼び出し、その商品についてMRPを即座に再計算する
+  (`triggeredBy=EVENT`)。次回の定期実行を待たずに不足を検知できる
+- `ManufacturingService`と`MrpService`は互いを参照し合う関係になるため、
+  `MrpService`側の注入を`@Lazy`にして循環依存を解消している
+
+### 追加されたAPI
+
+| メソッド | URL | 内容 |
+|---|---|---|
+| POST | `/api/batches/{batchId}/cancel` | DRAFT/PLAN→CANCELLED(MRP即時再計算) |
+| POST | `/api/mrp/run` | 全商品についてMRPを手動実行(AUTO相当) |
+
 ## 次のステップ
 
 このフェーズ0はdomain/mapperまでの実装です。次に必要になるのは:

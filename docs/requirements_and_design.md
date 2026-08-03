@@ -245,6 +245,28 @@ DRAFT → PLAN → MANUFACTURING → COMPLETED(通常/軽微な不良を含む)
 加水率 = レシピ内の全液体材料の使用量合計 ÷ 主原料(粉体)の使用量 × 100
 ```
 
+### 5.5 出荷FEFO選定・残存期限ルール(フェーズ5)
+
+```
+1. 対象商品の出荷可能バッチ(status=COMPLETED, remaining_qty > 0)を
+   製造日が古い順に取得する
+   (賞味期限 = 製造日 + shelf_life_days で、shelf_life_daysは商品ごとに固定のため、
+    製造日が古い順に並べることがそのまま期限が近い順(FEFO)と一致する)
+2. 各バッチの残存期限の割合を計算する:
+   残存率 = (賞味期限日数 − 経過日数) ÷ 賞味期限日数
+3. 取引先(customer)が残存期限の割合(required_residual_ratio)を指定している場合、
+   それを下回るバッチは候補から除外する(現場判断での代替は許可しない。
+   材料側の産地制約と同じ方針)
+4. 必要量に達するまで、期限が近い順にバッチを引き当てる
+5. 満たすバッチだけでは必要量に届かない場合は shortage=true とし、登録をブロックする
+
+【重要】この判定(3〜5)は、プレビュー(previewShipmentAllocation)だけでなく、
+実際の登録処理(registerShipmentLines)でも必ず同様に行う。
+プレビューだけでチェックし登録処理ではチェックしない設計にすると、
+プレビューの警告を無視してそのまま不適合なバッチを登録できてしまう抜け穴になる
+(実装時に実際にこの不具合が発生し、修正した。8.8節を参照)。
+```
+
 ---
 
 ## 6. スコープ外(将来検討事項)
@@ -264,13 +286,15 @@ DRAFT → PLAN → MANUFACTURING → COMPLETED(通常/軽微な不良を含む)
 
 | フェーズ | 内容 | 主なテーブル | 状況 |
 |---|---|---|---|
-| 0 | 基盤マスタ(材料・商品・レシピ) | material, material_package_spec, items, recipe_item | 実装済み |
-| 1 | 材料調達(発注〜入荷〜在庫化) | material_order, material_arrival, material_arrival_line, material_lot | 実装済み |
-| 2 | 製造管理(コア機能、手動Draft〜完了) | manufacturing_batch, batch_material_usage | 先行実装済み(未検証) |
-| 3 | 保留・交換・手動調整(例外処理群) | hold_resolution, stock_adjustment | 実装済み(未検証) |
-| 4 | MRP自動化 | mrp_run, manufacturing_batch.origin_type | 未着手 |
-| 5 | 注文管理(受注〜出荷) | customer, customer_order, order_line, carrier, shipment, shipment_line | 実装済み(未検証) |
-| 6 | 残存期限ルール・出荷FEFOの高度化 | customer.required_residual_ratio | 未着手 |
+| 0 | 基盤マスタ(材料・商品・レシピ) | material, material_package_spec, items, recipe_item | 実装済み・検証済み |
+| 1 | 材料調達(発注〜入荷〜在庫化) | material_order, material_arrival, material_arrival_line, material_lot | 実装済み・検証済み |
+| 2 | 製造管理(コア機能、手動Draft〜完了) | manufacturing_batch, batch_material_usage | 実装済み・検証済み |
+| 3 | 保留・交換・手動調整(例外処理群) | hold_resolution, stock_adjustment | 実装済み・検証済み |
+| 5 | 注文管理(受注〜出荷) | customer, customer_order, order_line, carrier, shipment, shipment_line | 実装済み・検証済み |
+| 4 | MRP自動化 | mrp_run, manufacturing_batch.origin_type | 実装済み(未検証) |
+| 6 | 残存期限ルール・出荷FEFOの高度化 | customer.required_residual_ratio | フェーズ5に統合済み(実装・検証済み) |
+
+**実装順序の変更**: 当初のロードマップではフェーズ4→5の順だったが、MRPの需要計算式(受注残を参照)がフェーズ5のテーブルに依存するため、実装順序をフェーズ5→4に入れ替えた(ブランチ名は`phase5`のまま運用)。またフェーズ6(残存期限ルール)は、独立した高度化ステップとしてではなく、フェーズ5の出荷FEFO選定ロジックに最初から組み込む形で実装した。
 
 フェーズ2のFEFO計算ロジックは、UI実装より先にロジック単体での検証を推奨する。
 
@@ -349,6 +373,8 @@ material_arrivalヘッダーを経由しないため、この構造変更によ�
 
 
 
+### 8.4 フェーズ2実装時に置いた前提(検証により確定)
+
 フェーズ2(製造管理)はコードとして書き上げた段階で、実機での動作確認はまだ行っていない。
 実装にあたり、以下2点を仮の前提として置いている。
 
@@ -357,9 +383,32 @@ material_arrivalヘッダーを経由しないため、この構造変更によ�
   `manufacturing_batch.plannedQty`は常に`items.standard_batch_qty`と同値になる想定
   (要件定義書 5.1節に記載していた「need = use_qty × (batch予定数量 / レシピ基準量)」という
   計算式は、この前提と矛盾するため実装では採用していない。この点は要修正の可能性がある)
-- **完成品(商品)の在庫を追跡する仕組みはまだ実装していない**。
-  `completeBatch`で`acceptedQty`(合格数)は記録するが、`items`側の在庫として
-  反映する処理はフェーズ5(出荷管理)と合わせて設計する想定のため保留している
+- **完成品(商品)の在庫を追跡する仕組み**は、当初フェーズ5と合わせて設計する想定だったが、
+  実装コストがほぼ無い(既存テーブルへの列追加のみ)と判断し、フェーズ2の時点で
+  `manufacturing_batch.remainingQty`として先行実装した。フェーズ5(出荷)では、
+  この列を材料ロットと同じ「条件付きDB更新」方式で減算している
+
+上記2点は、フェーズ0〜5までの一連の検証を通じて、この前提のまま問題なく機能することが確認された。
+
+### 8.8 フェーズ5:出荷FEFO・残存期限ルールの実装、および発見した不具合
+
+- 出荷のFEFO選定(`ShipmentService.previewShipmentAllocation`)は、材料側のFEFO
+  (産地フィルター)と同じ考え方で実装した。取引先ごとの残存期限ルール
+  (`customer.requiredResidualRatio`)を満たさないバッチは、現場判断での代替を
+  許可せず候補から除外する
+- **発見した不具合**: 実装当初、残存期限ルールの検証をプレビュー
+  (`previewShipmentAllocation`)でしか行っておらず、実際の登録処理
+  (`registerShipmentLines`)では検証していなかった。この状態では、
+  プレビューで`shortage: true`(残存期限ルールを満たすバッチが無い)と表示されても、
+  そのプレビュー結果を無視して不適合なバッチを直接指定すれば登録できてしまう
+  抜け穴になっていた。実際にテスト中にこの不具合が発生(要求水準0.99の取引先に対し、
+  残存率0.978のバッチが出荷登録できてしまった)ことを受けて修正した
+- 修正方針: 残存期限の計算式(`computeResidualRatio`)を共通メソッド化し、
+  プレビューと登録処理の両方で必ず同じ判定を行うようにした。これにより、
+  プレビューを経由しない直接的なAPI呼び出しであっても、不適合なバッチの登録は
+  必ずブロックされる
+- 受注のキャンセルは在庫プール型(ステータスを`CANCELLED`に変更するのみ)で実装し、
+  設計通りバッチとの紐付け解除処理等は不要だった
 
 ---
 
@@ -369,3 +418,5 @@ material_arrivalヘッダーを経由しないため、この構造変更によ�
 |---|---|
 | v1 | 要件定義・全体設計を初版として作成 |
 | v2 | フェーズ0・1の実装内容を反映。MyBatis採用、material_arrival/material_lotの設計修正を追記 |
+| v3 | フェーズ0〜3・5の全機能を実データで検証完了。material_id/order_idの明細側移動、出荷FEFO・残存期限ルールの実装と不具合修正、実装順序の入れ替え(5→4)を反映 |
+| v4 | フェーズ4(MRP自動化)を実装。二重控除していた計算式を修正。CANCELLEDステータスとEVENT即時再計算を追加 |

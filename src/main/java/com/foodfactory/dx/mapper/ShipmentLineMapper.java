@@ -25,4 +25,10 @@ public interface ShipmentLineMapper {
      * order_line経由でJOINし、受注全体の充足状況(PARTIALLY_SHIPPED/COMPLETED)を判定するために使う。
      */
     BigDecimal sumShippedQtyByOrderId(@Param("orderId") Long orderId);
+
+    /**
+     * 指定した商品(itemId)について、これまでに出荷された数量の合計を取得する
+     * (MRPの受注残計算で、注文された総数から差し引く「既に出荷済みの数」として使う)。
+     */
+    BigDecimal sumShippedQtyByItemId(@Param("itemId") Long itemId);
 }
