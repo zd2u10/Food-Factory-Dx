@@ -36,4 +36,12 @@
         WHERE order_id = #{orderId}
     </select>
 
+    <select id="sumActiveQtyByItemId" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(ol.qty), 0)
+        FROM order_line ol
+                 JOIN customer_order co ON ol.order_id = co.order_id
+        WHERE ol.item_id = #{itemId}
+          AND co.status != 'CANCELLED'
+    </select>
+
 </mapper>

@@ -23,4 +23,11 @@ public interface OrderLineMapper {
      * 「発注全体でいくつ注文されたか」の基準値として使う。
      */
     BigDecimal sumQtyByOrderId(@Param("orderId") Long orderId);
+
+    /**
+     * 指定した商品(itemId)について、CANCELLED以外の受注に含まれる注文数量の合計を取得する
+     * (MRPの受注残計算の「注文された総数」の部分に使う。実際の受注残は、
+     * この値からShipmentLineMapper.sumShippedQtyByItemIdを差し引いて算出する)。
+     */
+    BigDecimal sumActiveQtyByItemId(@Param("itemId") Long itemId);
 }

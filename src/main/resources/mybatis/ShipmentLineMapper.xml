@@ -42,4 +42,11 @@
         WHERE ol.order_id = #{orderId}
     </select>
 
+    <select id="sumShippedQtyByItemId" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(sl.shipped_qty), 0)
+        FROM shipment_line sl
+                 JOIN order_line ol ON sl.order_line_id = ol.line_id
+        WHERE ol.item_id = #{itemId}
+    </select>
+
 </mapper>

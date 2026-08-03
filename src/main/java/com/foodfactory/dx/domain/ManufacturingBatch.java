@@ -16,7 +16,8 @@ public class ManufacturingBatch {
         PLAN,           // 予定確定(人が内容を確認しOKを出した状態)
         MANUFACTURING,  // 製造中(実行ボタンが押され、材料を消費した状態)
         COMPLETED,      // 完了(検品を経て商品在庫に反映された状態)
-        REJECTED        // 破棄(重大な異常によりバッチ全体を無効化した状態)
+        REJECTED,       // 破棄(重大な異常によりバッチ全体を無効化した状態)
+        CANCELLED       // 取り消し(製造開始前に人が取り消した状態。REJECTEDとは発生タイミングが異なる)
     }
 
     public enum OriginType {
@@ -43,6 +44,7 @@ public class ManufacturingBatch {
     private BigDecimal lossQty;         // 完了時に確定する軽微な不良数
     private String lossComment;         // 軽微な不良の理由コメント
     private String rejectComment;       // REJECTEDになった場合の理由コメント
+    private String cancelComment;       // CANCELLEDになった場合の理由コメント(製造開始前の取り消し)
 
     private LocalDateTime createdAt;    // 登録日時(DB側で自動設定)
     private LocalDateTime updatedAt;    // 更新日時(DB側で自動設定)
@@ -176,6 +178,14 @@ public class ManufacturingBatch {
 
     public void setRejectComment(String rejectComment) {
         this.rejectComment = rejectComment;
+    }
+
+    public String getCancelComment() {
+        return cancelComment;
+    }
+
+    public void setCancelComment(String cancelComment) {
+        this.cancelComment = cancelComment;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/mybatis-3/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.foodfactory.dx.mapper.MrpRunMapper">
+
+    <resultMap id="mrpRunResultMap" type="com.foodfactory.dx.domain.MrpRun">
+        <id column="run_id" property="runId"/>
+        <result column="run_at" property="runAt"/>
+        <result column="triggered_by" property="triggeredBy"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.MrpRun"
+            useGeneratedKeys="true" keyProperty="runId">
+        INSERT INTO mrp_run (triggered_by)
+        VALUES (#{triggeredBy})
+    </insert>
+
+    <select id="findAll" resultMap="mrpRunResultMap">
+        SELECT * FROM mrp_run ORDER BY run_id DESC
+    </select>
+
+</mapper>
