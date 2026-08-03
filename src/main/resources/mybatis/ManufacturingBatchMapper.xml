@@ -114,4 +114,16 @@
           AND status IN ('DRAFT', 'PLAN', 'MANUFACTURING')
     </select>
 
+    <!--
+      DATE_SUB(NOW(), INTERVAL #{days} DAY): 「今日からdays日前」の日時を計算するMySQL関数。
+      created_at がその日時より前(=days日以上経過している)ものを条件に含める。
+    -->
+    <select id="findStaleDrafts" resultMap="batchResultMap">
+        SELECT *
+        FROM manufacturing_batch
+        WHERE status = 'DRAFT'
+          AND created_at &lt;= DATE_SUB(NOW(), INTERVAL #{days} DAY)
+        ORDER BY created_at ASC
+    </select>
+
 </mapper>
