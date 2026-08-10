@@ -14,6 +14,7 @@ public class Item {
     private BigDecimal targetStockQty;      // 目標在庫(将来拡張用。現時点では未使用)
     private BigDecimal standardBatchQty;    // 1バッチあたりの標準製造数(季節変動込みの平均値)
     private Integer shelfLifeDays;          // 賞味期限日数(製造日からの日数。現状90日固定)
+    private boolean active = true;          // 有効/廃版フラグ。物理削除はせず、廃版になったらfalseにする(論理削除)
     private LocalDateTime createdAt;        // 登録日時(DB側で自動設定)
     private LocalDateTime updatedAt;        // 更新日時(DB側で自動設定)
 
@@ -75,6 +76,14 @@ public class Item {
 
     public void setShelfLifeDays(Integer shelfLifeDays) {
         this.shelfLifeDays = shelfLifeDays;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     public LocalDateTime getCreatedAt() {

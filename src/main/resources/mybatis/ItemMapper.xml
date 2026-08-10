@@ -12,27 +12,40 @@
         <result column="target_stock_qty" property="targetStockQty"/>
         <result column="standard_batch_qty" property="standardBatchQty"/>
         <result column="shelf_life_days" property="shelfLifeDays"/>
+        <result column="is_active" property="active"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
     </resultMap>
 
     <insert id="insert" parameterType="com.foodfactory.dx.domain.Item"
             useGeneratedKeys="true" keyProperty="itemId">
-        INSERT INTO items (name, safety_stock_qty, target_stock_qty, standard_batch_qty, shelf_life_days)
-        VALUES (#{name}, #{safetyStockQty}, #{targetStockQty}, #{standardBatchQty}, #{shelfLifeDays})
+        INSERT INTO items (name, safety_stock_qty, target_stock_qty, standard_batch_qty, shelf_life_days, is_active)
+        VALUES (#{name}, #{safetyStockQty}, #{targetStockQty}, #{standardBatchQty}, #{shelfLifeDays}, #{active})
     </insert>
 
     <select id="findById" resultMap="itemResultMap">
         SELECT item_id, name, safety_stock_qty, target_stock_qty, standard_batch_qty, shelf_life_days,
-               created_at, updated_at
+               is_active, created_at, updated_at
         FROM items
         WHERE item_id = #{itemId}
     </select>
 
     <select id="findAll" resultMap="itemResultMap">
         SELECT item_id, name, safety_stock_qty, target_stock_qty, standard_batch_qty, shelf_life_days,
-               created_at, updated_at
+               is_active, created_at, updated_at
         FROM items
+        ORDER BY item_id
+    </select>
+
+    <select id="findByFilters" resultMap="itemResultMap">
+        SELECT item_id, name, safety_stock_qty, target_stock_qty, standard_batch_qty, shelf_life_days,
+               is_active, created_at, updated_at
+        FROM items
+        <where>
+            <if test="active != null">
+                AND is_active = #{active}
+            </if>
+        </where>
         ORDER BY item_id
     </select>
 
@@ -46,10 +59,10 @@
         WHERE item_id = #{itemId}
     </update>
 
-    <delete id="deleteById">
-        DELETE
-        FROM items
+    <update id="setActive">
+        UPDATE items
+        SET is_active = #{active}
         WHERE item_id = #{itemId}
-    </delete>
+    </update>
 
 </mapper>

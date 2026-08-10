@@ -15,7 +15,11 @@ public interface ItemMapper {
 
     List<Item> findAll();
 
+    /** 有効フラグで絞り込んで取得する。activeにnullを渡せば絞り込まない(全件対象)。 */
+    List<Item> findByFilters(@Param("active") Boolean active);
+
     int update(Item item);
 
-    int deleteById(@Param("itemId") Long itemId);
+    /** 有効/廃版フラグだけを更新する(論理削除・復元の両方に使う)。物理削除は行わない。 */
+    int setActive(@Param("itemId") Long itemId, @Param("active") boolean active);
 }

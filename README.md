@@ -355,6 +355,8 @@ Eclipse上で以下の手順ですぐに実行・確認できる。
 | メソッド | URL | 内容 |
 |---|---|---|
 | POST | `/api/batches/{batchId}/cancel` | DRAFT/PLAN→CANCELLED(MRP即時再計算) |
+| POST | `/api/batches/confirm-plan-bulk` | 複数バッチを一括でDRAFT→PLANに確定 |
+| GET | `/api/batches/stale-drafts?days=3` | 指定日数以上放置されているDraftの一覧 |
 | POST | `/api/mrp/run` | 全商品についてMRPを手動実行(AUTO相当) |
 
 ## 次のステップ

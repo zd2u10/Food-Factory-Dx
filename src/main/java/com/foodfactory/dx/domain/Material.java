@@ -23,6 +23,7 @@ public class Material {
     private Category category;       // RAW(原料) or ADDITIVE(添加物)
     private BaseUnit baseUnit;       // WEIGHT(重量) or VOLUME(体積)。数量の単位系を決める
     private boolean mainMaterial;    // ベーカーズパーセント計算の基準になる主原料かどうか
+    private boolean active = true;   // 有効/廃版フラグ。物理削除はせず、廃版になったらfalseにする(論理削除)
     private LocalDateTime createdAt; // 登録日時(DB側で自動設定。読み取り専用)
     private LocalDateTime updatedAt; // 更新日時(DB側で自動設定。読み取り専用)
 
@@ -74,6 +75,14 @@ public class Material {
 
     public void setMainMaterial(boolean mainMaterial) {
         this.mainMaterial = mainMaterial;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     public LocalDateTime getCreatedAt() {
