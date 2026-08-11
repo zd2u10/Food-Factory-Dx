@@ -44,7 +44,8 @@
 
     <update id="update" parameterType="com.foodfactory.dx.domain.RecipeItem">
         UPDATE recipe_item
-        SET use_qty          = #{useQty},
+        SET material_id      = #{materialId},
+            use_qty          = #{useQty},
             allowed_origins  = #{allowedOrigins},
             is_main_material = #{mainMaterial},
             is_liquid        = #{liquid}
