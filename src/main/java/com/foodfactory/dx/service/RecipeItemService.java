@@ -20,13 +20,6 @@ public class RecipeItemService {
         return recipeItem;
     }
 
-    /**
-     * 複数のレシピ明細を一括登録する。
-     *
-     * @Transactional: リスト内の1件でも登録に失敗した場合、それより前に登録済みだった分も
-     *   全て取り消す(ロールバックする)。「主原料は登録できたが、液体材料の登録だけ失敗し、
-     *   加水率計算に必要な材料が欠けたレシピが中途半端に保存されてしまう」という事態を防ぐため。
-     */
     @Transactional
     public List<RecipeItem> createRecipeItemsBulk(List<RecipeItem> recipeItems) {
         for (RecipeItem recipeItem : recipeItems) {
@@ -39,10 +32,6 @@ public class RecipeItemService {
         return recipeItemMapper.findByItemId(itemId);
     }
 
-    /**
-     * レシピ明細を編集する。materialId(材料そのもの)の変更も含めて、全項目を上書きできる。
-     * 材料の廃版に伴う入れ替わりなど、レシピの材料構成自体が変わる運用を想定している。
-     */
     public RecipeItem updateRecipeItem(Long recipeItemId, RecipeItem recipeItem) {
         recipeItemMapper.findById(recipeItemId)
                 .orElseThrow(() -> new IllegalArgumentException(
@@ -50,5 +39,18 @@ public class RecipeItemService {
         recipeItem.setRecipeItemId(recipeItemId);
         recipeItemMapper.update(recipeItem);
         return recipeItem;
+    }
+
+    /**
+     * レシピ明細を削除する。誤って登録してしまった明細を取り消すための操作。
+     * recipe_itemは、他のテーブル(manufacturing_batch等)から直接参照されるものではなく、
+     * FEFO計算のたびに都度読み取られるだけの「現在のレシピ内容」という位置づけのため、
+     * material・itemsのような論理削除ではなく、物理削除で問題ない。
+     */
+    public void deleteRecipeItem(Long recipeItemId) {
+        recipeItemMapper.findById(recipeItemId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "指定されたレシピ明細が見つかりません: recipeItemId=" + recipeItemId));
+        recipeItemMapper.deleteById(recipeItemId);
     }
 }

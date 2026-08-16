@@ -22,4 +22,12 @@ public class CustomerService {
     public List<Customer> listCustomers() {
         return customerMapper.findAll();
     }
+
+    public Customer updateCustomer(Long customerId, Customer customer) {
+        customerMapper.findById(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("指定された取引先が見つかりません: customerId=" + customerId));
+        customer.setCustomerId(customerId);
+        customerMapper.update(customer);
+        return customer;
+    }
 }

@@ -1,6 +1,5 @@
 package com.foodfactory.dx.domain;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /** 取引先マスタ。 */
@@ -11,20 +10,20 @@ public class Customer {
         B2C   // 個人向け
     }
 
-    private Long customerId;                    // 主キー
-    private String name;                        // 取引先名
-    private CustomerType customerType;          // B2B or B2C
-    private BigDecimal requiredResidualRatio;   // 出荷時に必要な賞味期限の残存割合(0〜1)。指定なしはnull(主にB2C)
-    private LocalDateTime createdAt;            // 登録日時(DB側で自動設定)
-    private LocalDateTime updatedAt;            // 更新日時(DB側で自動設定)
+    private Long customerId;                  // 主キー
+    private String name;                      // 取引先名
+    private CustomerType customerType;        // B2B or B2C
+    private Integer requiredResidualDays;     // 出荷時に必要な賞味期限の残存日数。指定なしはnull(主にB2C)
+    private LocalDateTime createdAt;          // 登録日時(DB側で自動設定)
+    private LocalDateTime updatedAt;          // 更新日時(DB側で自動設定)
 
     public Customer() {
     }
 
-    public Customer(String name, CustomerType customerType, BigDecimal requiredResidualRatio) {
+    public Customer(String name, CustomerType customerType, Integer requiredResidualDays) {
         this.name = name;
         this.customerType = customerType;
-        this.requiredResidualRatio = requiredResidualRatio;
+        this.requiredResidualDays = requiredResidualDays;
     }
 
     public Long getCustomerId() {
@@ -51,12 +50,12 @@ public class Customer {
         this.customerType = customerType;
     }
 
-    public BigDecimal getRequiredResidualRatio() {
-        return requiredResidualRatio;
+    public Integer getRequiredResidualDays() {
+        return requiredResidualDays;
     }
 
-    public void setRequiredResidualRatio(BigDecimal requiredResidualRatio) {
-        this.requiredResidualRatio = requiredResidualRatio;
+    public void setRequiredResidualDays(Integer requiredResidualDays) {
+        this.requiredResidualDays = requiredResidualDays;
     }
 
     public LocalDateTime getCreatedAt() {

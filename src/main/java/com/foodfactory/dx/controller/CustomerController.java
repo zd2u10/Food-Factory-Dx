@@ -6,7 +6,9 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,5 +32,11 @@ public class CustomerController {
     public ResponseEntity<Customer> create(@RequestBody Customer customer) {
         Customer created = customerService.createCustomer(customer);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PutMapping("/{customerId}")
+    public ResponseEntity<Customer> update(@PathVariable Long customerId, @RequestBody Customer customer) {
+        Customer updated = customerService.updateCustomer(customerId, customer);
+        return ResponseEntity.ok(updated);
     }
 }

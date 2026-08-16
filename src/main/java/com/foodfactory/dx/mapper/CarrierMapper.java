@@ -14,4 +14,6 @@ public interface CarrierMapper {
     Optional<Carrier> findById(@Param("carrierId") Long carrierId);
 
     List<Carrier> findAll();
+
+    int update(Carrier carrier);
 }

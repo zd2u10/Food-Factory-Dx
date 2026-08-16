@@ -50,6 +50,10 @@ CREATE TABLE items (
   target_stock_qty    DECIMAL(10, 2) NOT NULL DEFAULT 0 COMMENT '目標在庫(将来拡張用)',
   standard_batch_qty  DECIMAL(10, 2) NOT NULL COMMENT '1バッチあたりの標準製造数(季節変動込み平均値)',
   shelf_life_days     INT NOT NULL DEFAULT 90 COMMENT '賞味期限日数',
+  hydration_ratio_min DECIMAL(5, 2) NULL COMMENT '加水率の下限(%)。職人が試作の上で確立した、季節変動込みの基準値',
+  hydration_ratio_max DECIMAL(5, 2) NULL COMMENT '加水率の上限(%)',
+  hydration_qty_min   DECIMAL(10, 2) NULL COMMENT '加水量(溶液合計)の下限(ml)。主原料の使用量×加水率で算出した参考値',
+  hydration_qty_max   DECIMAL(10, 2) NULL COMMENT '加水量(溶液合計)の上限(ml)',
   is_active           BOOLEAN NOT NULL DEFAULT TRUE COMMENT '有効/廃版フラグ。物理削除はせず、廃版になったらFALSEにする(論理削除)',
   created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

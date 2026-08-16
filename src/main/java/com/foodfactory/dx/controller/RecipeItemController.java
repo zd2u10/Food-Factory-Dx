@@ -5,6 +5,7 @@ import com.foodfactory.dx.service.RecipeItemService;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -60,5 +61,14 @@ public class RecipeItemController {
         recipeItem.setItemId(itemId);
         RecipeItem updated = recipeItemService.updateRecipeItem(recipeItemId, recipeItem);
         return ResponseEntity.ok(updated);
+    }
+
+    /** レシピ明細を削除する(誤って登録した明細の取り消し)。 */
+    @DeleteMapping("/{recipeItemId}")
+    public ResponseEntity<Void> delete(
+            @PathVariable Long itemId,
+            @PathVariable Long recipeItemId) {
+        recipeItemService.deleteRecipeItem(recipeItemId);
+        return ResponseEntity.noContent().build();
     }
 }

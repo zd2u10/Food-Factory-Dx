@@ -12,6 +12,10 @@
         <result column="target_stock_qty" property="targetStockQty"/>
         <result column="standard_batch_qty" property="standardBatchQty"/>
         <result column="shelf_life_days" property="shelfLifeDays"/>
+        <result column="hydration_ratio_min" property="hydrationRatioMin"/>
+        <result column="hydration_ratio_max" property="hydrationRatioMax"/>
+        <result column="hydration_qty_min" property="hydrationQtyMin"/>
+        <result column="hydration_qty_max" property="hydrationQtyMax"/>
         <result column="is_active" property="active"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
@@ -19,28 +23,26 @@
 
     <insert id="insert" parameterType="com.foodfactory.dx.domain.Item"
             useGeneratedKeys="true" keyProperty="itemId">
-        INSERT INTO items (name, safety_stock_qty, target_stock_qty, standard_batch_qty, shelf_life_days, is_active)
-        VALUES (#{name}, #{safetyStockQty}, #{targetStockQty}, #{standardBatchQty}, #{shelfLifeDays}, #{active})
+        INSERT INTO items (
+            name, safety_stock_qty, target_stock_qty, standard_batch_qty, shelf_life_days,
+            hydration_ratio_min, hydration_ratio_max, hydration_qty_min, hydration_qty_max, is_active
+        )
+        VALUES (
+            #{name}, #{safetyStockQty}, #{targetStockQty}, #{standardBatchQty}, #{shelfLifeDays},
+            #{hydrationRatioMin}, #{hydrationRatioMax}, #{hydrationQtyMin}, #{hydrationQtyMax}, #{active}
+        )
     </insert>
 
     <select id="findById" resultMap="itemResultMap">
-        SELECT item_id, name, safety_stock_qty, target_stock_qty, standard_batch_qty, shelf_life_days,
-               is_active, created_at, updated_at
-        FROM items
-        WHERE item_id = #{itemId}
+        SELECT * FROM items WHERE item_id = #{itemId}
     </select>
 
     <select id="findAll" resultMap="itemResultMap">
-        SELECT item_id, name, safety_stock_qty, target_stock_qty, standard_batch_qty, shelf_life_days,
-               is_active, created_at, updated_at
-        FROM items
-        ORDER BY item_id
+        SELECT * FROM items ORDER BY item_id
     </select>
 
     <select id="findByFilters" resultMap="itemResultMap">
-        SELECT item_id, name, safety_stock_qty, target_stock_qty, standard_batch_qty, shelf_life_days,
-               is_active, created_at, updated_at
-        FROM items
+        SELECT * FROM items
         <where>
             <if test="active != null">
                 AND is_active = #{active}
@@ -51,11 +53,15 @@
 
     <update id="update" parameterType="com.foodfactory.dx.domain.Item">
         UPDATE items
-        SET name               = #{name},
-            safety_stock_qty   = #{safetyStockQty},
-            target_stock_qty   = #{targetStockQty},
-            standard_batch_qty = #{standardBatchQty},
-            shelf_life_days    = #{shelfLifeDays}
+        SET name                = #{name},
+            safety_stock_qty    = #{safetyStockQty},
+            target_stock_qty    = #{targetStockQty},
+            standard_batch_qty  = #{standardBatchQty},
+            shelf_life_days     = #{shelfLifeDays},
+            hydration_ratio_min = #{hydrationRatioMin},
+            hydration_ratio_max = #{hydrationRatioMax},
+            hydration_qty_min   = #{hydrationQtyMin},
+            hydration_qty_max   = #{hydrationQtyMax}
         WHERE item_id = #{itemId}
     </update>
 
