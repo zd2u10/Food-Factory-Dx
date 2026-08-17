@@ -17,6 +17,10 @@ CREATE TABLE material_order (
   material_id    BIGINT NOT NULL,
   supplier_id    VARCHAR(100) NOT NULL COMMENT '仕入先(今回は文字列管理。将来的にsupplierマスタに分離してもよい)',
   order_qty      DECIMAL(10, 2) NOT NULL COMMENT '発注数量(g または ml)',
+  allowed_origins VARCHAR(255) NULL
+    COMMENT 'この発注で許可する産地をカンマ区切りで保持(例: "愛知,三重")。
+      recipe_item.allowed_originsと同じ形式。任意項目で、
+      未指定の場合は産地を問わない発注として扱う',
   order_date     DATE NOT NULL,
   expected_date  DATE NULL COMMENT '納品予定日',
   status         ENUM('NOT_ARRIVED', 'PARTIALLY_ARRIVED', 'FULLY_ARRIVED')

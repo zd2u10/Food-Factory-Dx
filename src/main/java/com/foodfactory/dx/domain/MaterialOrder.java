@@ -20,6 +20,8 @@ public class MaterialOrder {
     private Long materialId;          // 発注対象の材料(material.materialIdを参照)
     private String supplierId;        // 仕入先(現状は文字列管理。将来supplierマスタに分離してもよい)
     private BigDecimal orderQty;      // 発注数量(g または ml)
+    private String allowedOrigins;    // この発注で許可する産地をカンマ区切りで保持(例: "愛知,三重")。
+                                       // recipe_item.allowedOriginsと同じ形式。任意項目(null許容)。
     private LocalDate orderDate;      // 発注日
     private LocalDate expectedDate;   // 納品予定日(仕入先から明言されないこともあるためnull許容)
 
@@ -74,6 +76,14 @@ public class MaterialOrder {
 
     public void setOrderQty(BigDecimal orderQty) {
         this.orderQty = orderQty;
+    }
+
+    public String getAllowedOrigins() {
+        return allowedOrigins;
+    }
+
+    public void setAllowedOrigins(String allowedOrigins) {
+        this.allowedOrigins = allowedOrigins;
     }
 
     public LocalDate getOrderDate() {

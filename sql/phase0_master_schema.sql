@@ -33,6 +33,11 @@ CREATE TABLE material_package_spec (
   origin              VARCHAR(100) NOT NULL COMMENT '産地・仕入先区分(例:愛知、新潟)',
   package_weight      DECIMAL(10, 2) NOT NULL COMMENT '1箱/袋あたりの目安数量(g または ml)',
   package_unit_label  VARCHAR(20) NOT NULL COMMENT '表示用単位名(箱、袋、缶など)',
+  can_mix             BOOLEAN NOT NULL DEFAULT FALSE
+    COMMENT '複数の産地が混在する可能性はあるか。trueの産地同士は、発注時に
+      重量・単位が一致するものが自動でグループ化され、まとめて1つの選択肢として扱われる
+      (例: 愛知・三重が両方trueなら「愛知or三重」という1つのチェックボックスになる)。
+      falseの産地は常に単独で表示される(例: 山梨産限定のレシピがある場合など)',
   created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_mps_material

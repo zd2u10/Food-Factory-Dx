@@ -178,7 +178,16 @@ public class ManufacturingService {
 
         for (RecipeItem recipeItem : recipeItems) {
             BigDecimal need = recipeItem.getUseQty();
-            List<String> allowedOrigins = recipeItem.getAllowedOriginList();
+
+            // 材料が原料(RAW)か添加物(ADDITIVE)かで、FEFO選定の基準を切り替える。
+            //   原料  : 産地 + 賞味期限のルールで選定する(allowedOriginsで絞り込む)
+            //   添加物: 賞味期限のみで選定する(産地の概念がそもそも無いため)
+            // 【修正した不具合】以前は材料種別を区別せず一律で産地フィルターをかけていたため、
+            // 添加物のallowedOrigins(常に空)によって「空リストに含まれるものは無い」という判定になり、
+            // 添加物はどのロットも絶対に選定できず、FEFO計算が必ず失敗する不具合があった。
+            Material material = materialMapper.findById(recipeItem.getMaterialId()).orElse(null);
+            boolean isRawMaterial = material != null && material.getCategory() == Material.Category.RAW;
+            List<String> allowedOrigins = isRawMaterial ? recipeItem.getAllowedOriginList() : null;
 
             List<MaterialLot> candidateLots = materialLotMapper
                     .findByMaterialIdOrderByExpiry(recipeItem.getMaterialId());
@@ -188,7 +197,8 @@ public class ManufacturingService {
                 if (remainingNeed.compareTo(BigDecimal.ZERO) <= 0) {
                     break;
                 }
-                if (!allowedOrigins.contains(lot.getOrigin())) {
+                // 原料の場合のみ産地チェックを行う。添加物(allowedOrigins == null)は無条件で候補にする。
+                if (allowedOrigins != null && !allowedOrigins.contains(lot.getOrigin())) {
                     continue;
                 }
 
@@ -201,7 +211,6 @@ public class ManufacturingService {
 
             if (remainingNeed.compareTo(BigDecimal.ZERO) > 0) {
                 result.setShortage(true);
-                Material material = materialMapper.findById(recipeItem.getMaterialId()).orElse(null);
                 String materialName = (material != null) ? material.getName() : "ID=" + recipeItem.getMaterialId();
                 result.getShortageMaterialNames().add(materialName);
             }

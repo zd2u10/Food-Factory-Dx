@@ -11,30 +11,23 @@
         <result column="origin" property="origin"/>
         <result column="package_weight" property="packageWeight"/>
         <result column="package_unit_label" property="packageUnitLabel"/>
+        <result column="can_mix" property="canMix"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
     </resultMap>
 
     <insert id="insert" parameterType="com.foodfactory.dx.domain.MaterialPackageSpec"
             useGeneratedKeys="true" keyProperty="specId">
-        INSERT INTO material_package_spec (material_id, origin, package_weight, package_unit_label)
-        VALUES (#{materialId}, #{origin}, #{packageWeight}, #{packageUnitLabel})
+        INSERT INTO material_package_spec (material_id, origin, package_weight, package_unit_label, can_mix)
+        VALUES (#{materialId}, #{origin}, #{packageWeight}, #{packageUnitLabel}, #{canMix})
     </insert>
 
     <select id="findById" resultMap="specResultMap">
-        SELECT spec_id, material_id, origin, package_weight, package_unit_label, created_at, updated_at
-        FROM material_package_spec
-        WHERE spec_id = #{specId}
+        SELECT * FROM material_package_spec WHERE spec_id = #{specId}
     </select>
 
-    <!--
-      findByMaterialId: WHERE句の条件がmaterial_idだけなので、findByIdとほぼ同じ形。
-      違いは「1件しか返らない前提か、複数件返りうる前提か」であり、
-      これはXML側ではなく、Mapperインターフェース側の戻り値の型(Optional か List か)で表現している。
-    -->
     <select id="findByMaterialId" resultMap="specResultMap">
-        SELECT spec_id, material_id, origin, package_weight, package_unit_label, created_at, updated_at
-        FROM material_package_spec
+        SELECT * FROM material_package_spec
         WHERE material_id = #{materialId}
         ORDER BY origin
     </select>
@@ -43,14 +36,13 @@
         UPDATE material_package_spec
         SET origin             = #{origin},
             package_weight     = #{packageWeight},
-            package_unit_label = #{packageUnitLabel}
+            package_unit_label = #{packageUnitLabel},
+            can_mix            = #{canMix}
         WHERE spec_id = #{specId}
     </update>
 
     <delete id="deleteById">
-        DELETE
-        FROM material_package_spec
-        WHERE spec_id = #{specId}
+        DELETE FROM material_package_spec WHERE spec_id = #{specId}
     </delete>
 
 </mapper>

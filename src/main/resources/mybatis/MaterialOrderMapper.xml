@@ -10,6 +10,7 @@
         <result column="material_id" property="materialId"/>
         <result column="supplier_id" property="supplierId"/>
         <result column="order_qty" property="orderQty"/>
+        <result column="allowed_origins" property="allowedOrigins"/>
         <result column="order_date" property="orderDate"/>
         <result column="expected_date" property="expectedDate"/>
         <result column="status" property="status"/>
@@ -19,22 +20,20 @@
 
     <insert id="insert" parameterType="com.foodfactory.dx.domain.MaterialOrder"
             useGeneratedKeys="true" keyProperty="orderId">
-        INSERT INTO material_order (material_id, supplier_id, order_qty, order_date, expected_date, status)
-        VALUES (#{materialId}, #{supplierId}, #{orderQty}, #{orderDate}, #{expectedDate}, #{status})
+        INSERT INTO material_order (
+            material_id, supplier_id, order_qty, allowed_origins, order_date, expected_date, status
+        )
+        VALUES (
+            #{materialId}, #{supplierId}, #{orderQty}, #{allowedOrigins}, #{orderDate}, #{expectedDate}, #{status}
+        )
     </insert>
 
     <select id="findById" resultMap="orderResultMap">
-        SELECT order_id, material_id, supplier_id, order_qty, order_date, expected_date, status,
-               created_at, updated_at
-        FROM material_order
-        WHERE order_id = #{orderId}
+        SELECT * FROM material_order WHERE order_id = #{orderId}
     </select>
 
     <select id="findAll" resultMap="orderResultMap">
-        SELECT order_id, material_id, supplier_id, order_qty, order_date, expected_date, status,
-               created_at, updated_at
-        FROM material_order
-        ORDER BY order_id
+        SELECT * FROM material_order ORDER BY order_id
     </select>
 
     <update id="updateStatus">

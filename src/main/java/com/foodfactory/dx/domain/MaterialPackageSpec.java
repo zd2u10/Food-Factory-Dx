@@ -13,6 +13,11 @@ public class MaterialPackageSpec {
     private String origin;                   // 産地・仕入先区分(例: 愛知、新潟)
     private BigDecimal packageWeight;         // 1箱/袋あたりの目安数量(重量or体積、material.baseUnitに従う)
     private String packageUnitLabel;         // 表示用の単位名(箱、袋、缶など)
+    private boolean canMix;                  // 複数の産地が混在する可能性はあるか。
+                                              // trueの産地同士は、発注時に重量・単位が一致するものが
+                                              // 自動でグループ化され、まとめて1つの選択肢として扱われる
+                                              // (例: 愛知・三重が両方trueなら「愛知or三重」という
+                                              //  1つのチェックボックスになる)。falseは常に単独表示。
     private LocalDateTime createdAt;         // 登録日時(DB側で自動設定)
     private LocalDateTime updatedAt;         // 更新日時(DB側で自動設定)
 
@@ -64,6 +69,14 @@ public class MaterialPackageSpec {
 
     public void setPackageUnitLabel(String packageUnitLabel) {
         this.packageUnitLabel = packageUnitLabel;
+    }
+
+    public boolean isCanMix() {
+        return canMix;
+    }
+
+    public void setCanMix(boolean canMix) {
+        this.canMix = canMix;
     }
 
     public LocalDateTime getCreatedAt() {
