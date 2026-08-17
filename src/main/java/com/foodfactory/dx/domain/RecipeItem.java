@@ -25,16 +25,6 @@ public class RecipeItem {
     public RecipeItem() {
     }
 
-    public RecipeItem(Long itemId, Long materialId, BigDecimal useQty,
-                       List<String> allowedOriginList, boolean mainMaterial, boolean liquid) {
-        this.itemId = itemId;
-        this.materialId = materialId;
-        this.useQty = useQty;
-        setAllowedOriginList(allowedOriginList);
-        this.mainMaterial = mainMaterial;
-        this.liquid = liquid;
-    }
-
     public Long getRecipeItemId() {
         return recipeItemId;
     }
@@ -75,14 +65,6 @@ public class RecipeItem {
         this.allowedOrigins = allowedOrigins;
     }
 
-    /**
-     * "愛知,三重" のようなカンマ区切り文字列を ["愛知", "三重"] のリストに変換する。
-     *   1. split(",")         : カンマの位置で文字列を分割し配列にする
-     *   2. Arrays.stream(...) : 配列をStreamに変換
-     *   3. .map(String::trim) : 各要素の前後の余分な空白を取り除く
-     *   4. .filter(...)       : 空文字を除外する(末尾に余分なカンマがあった場合の対策)
-     *   5. .collect(...)      : 最終的にList<String>に集約する
-     */
     public List<String> getAllowedOriginList() {
         return Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)
@@ -90,7 +72,6 @@ public class RecipeItem {
                 .collect(Collectors.toList());
     }
 
-    /** ["愛知", "三重"] のようなリストを "愛知,三重" のカンマ区切り文字列に変換して保持する。 */
     public void setAllowedOriginList(List<String> origins) {
         this.allowedOrigins = String.join(",", origins);
     }

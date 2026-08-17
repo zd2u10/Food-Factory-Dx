@@ -26,4 +26,10 @@
         SELECT * FROM carrier ORDER BY carrier_id
     </select>
 
+    <update id="update" parameterType="com.foodfactory.dx.domain.Carrier">
+        UPDATE carrier
+        SET name = #{name}
+        WHERE carrier_id = #{carrierId}
+    </update>
+
 </mapper>

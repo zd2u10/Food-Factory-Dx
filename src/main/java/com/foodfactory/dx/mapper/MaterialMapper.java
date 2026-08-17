@@ -47,9 +47,22 @@ public interface MaterialMapper {
     /** 登録されている材料を全件取得する。 */
     List<Material> findAll();
 
+    /**
+     * 分類(RAW/ADDITIVE)・有効フラグで絞り込んで取得する。
+     * category/activeはどちらもnullを許容する。nullの場合はその条件を無視して全件対象にする
+     * (XML側のMyBatis動的SQL(<if>タグ)で、値がある条件だけWHERE句に含める仕組みになっている)。
+     */
+    List<Material> findByFilters(@Param("category") Material.Category category,
+                                  @Param("active") Boolean active);
+
     /** 材料の内容を更新する。戻り値は変更された行数。 */
     int update(Material material);
 
-    /** IDを指定して1件削除する。戻り値は削除された行数。 */
-    int deleteById(@Param("materialId") Long materialId);
+    /**
+     * 有効/廃版フラグだけを更新する専用メソッド(論理削除・復元の両方に使う)。
+     * activeにfalseを渡せば廃版(論理削除)、trueを渡せば復元になる。
+     * 物理的な削除(DELETE文)は行わない。他のテーブル(recipe_item等)から
+     * 既に参照されている可能性があり、参照整合性を壊さないようにするため。
+     */
+    int setActive(@Param("materialId") Long materialId, @Param("active") boolean active);
 }

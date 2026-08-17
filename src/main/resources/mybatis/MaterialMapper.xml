@@ -37,6 +37,7 @@
         <result column="category" property="category"/>
         <result column="base_unit" property="baseUnit"/>
         <result column="is_main_material" property="mainMaterial"/>
+        <result column="is_active" property="active"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
     </resultMap>
@@ -60,19 +61,46 @@
     -->
     <insert id="insert" parameterType="com.foodfactory.dx.domain.Material"
             useGeneratedKeys="true" keyProperty="materialId">
-        INSERT INTO material (name, category, base_unit, is_main_material)
-        VALUES (#{name}, #{category}, #{baseUnit}, #{mainMaterial})
+        INSERT INTO material (name, category, base_unit, is_main_material, is_active)
+        VALUES (#{name}, #{category}, #{baseUnit}, #{mainMaterial}, #{active})
     </insert>
 
     <select id="findById" resultMap="materialResultMap">
-        SELECT material_id, name, category, base_unit, is_main_material, created_at, updated_at
+        SELECT material_id, name, category, base_unit, is_main_material, is_active, created_at, updated_at
         FROM material
         WHERE material_id = #{materialId}
     </select>
 
     <select id="findAll" resultMap="materialResultMap">
-        SELECT material_id, name, category, base_unit, is_main_material, created_at, updated_at
+        SELECT material_id, name, category, base_unit, is_main_material, is_active, created_at, updated_at
         FROM material
+        ORDER BY material_id
+    </select>
+
+    <!--
+      findByFilters: 分類(category)・有効フラグ(active)で絞り込む検索。
+
+      <where>タグ: 中の<if>で1つも条件が有効にならなかった場合、WHERE句自体を出力しない
+                   (「WHERE」という単語だけが残ってSQL構文エラーになる事態を防いでくれる)。
+                   また、複数の<if>が有効になった際、最初のANDを自動的に取り除いてくれる
+                   (例えば2つ目以降の条件だけに手動でANDを書けばよい)。
+
+      <if test="category != null">: Java側からcategoryにnullが渡された場合、
+                   このSQL断片(AND category = ...)自体がまるごと出力されない。
+                   これにより「分類は絞り込まず、有効なものだけ見たい」といった
+                   一部の条件だけを指定する検索が、1つのSQL文で表現できる。
+    -->
+    <select id="findByFilters" resultMap="materialResultMap">
+        SELECT material_id, name, category, base_unit, is_main_material, is_active, created_at, updated_at
+        FROM material
+        <where>
+            <if test="category != null">
+                AND category = #{category}
+            </if>
+            <if test="active != null">
+                AND is_active = #{active}
+            </if>
+        </where>
         ORDER BY material_id
     </select>
 
@@ -85,10 +113,10 @@
         WHERE material_id = #{materialId}
     </update>
 
-    <delete id="deleteById">
-        DELETE
-        FROM material
+    <update id="setActive">
+        UPDATE material
+        SET is_active = #{active}
         WHERE material_id = #{materialId}
-    </delete>
+    </update>
 
 </mapper>

@@ -6,25 +6,14 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 材料マスタのREST APIエンドポイント。
- *
- * ここは「動作確認用」の最小構成。
- * 本来はリクエスト/レスポンス専用のDTO(dtoパッケージ)を間に挟むのが望ましいが、
- * 今回はMyBatisのSQLが正しく動くかどうかを素早く確認する目的のため、
- * domainクラス(Material)をそのままやり取りしている。
- *
- * @RestController: このクラスの各メソッドの戻り値を、そのままJSONに変換して
- *                  HTTPレスポンスとして返す、という意味の目印
- *                  (画面のHTMLを返す通常のControllerとは違い、APIサーバー用の動き方になる)。
- * @RequestMapping("/api/materials"): このクラスの全メソッドは
- *                  "http://localhost:8080/api/materials" から始まるURLに反応する、という意味。
- */
 @RestController
 @RequestMapping("/api/materials")
 public class MaterialController {
@@ -36,39 +25,48 @@ public class MaterialController {
     }
 
     /**
-     * 材料の一覧を取得する。
+     * 材料の一覧を取得する。分類・有効フラグでの絞り込みに対応する。
      *
-     * @GetMapping: HTTPのGETメソッドでアクセスされた時にこのメソッドを実行する、という目印。
-     *              引数を何も書いていないので、"/api/materials" にGETでアクセスすると呼ばれる。
-     *              ブラウザにURLをそのまま打ち込むだけで試せる(ブラウザの通常のアクセスはGETのため)。
+     * @RequestParam(required = false): クエリパラメータが無ければnullのまま受け取る、という意味。
+     *   例:
+     *     GET /api/materials                     → 全件
+     *     GET /api/materials?category=RAW        → 原料のみ
+     *     GET /api/materials?active=true         → 有効なものだけ
+     *     GET /api/materials?category=RAW&active=false → 廃版になった原料だけ
      */
     @GetMapping
-    public List<Material> list() {
-        return materialService.listMaterials();
+    public List<Material> list(
+            @RequestParam(required = false) Material.Category category,
+            @RequestParam(required = false) Boolean active) {
+        return materialService.listMaterials(category, active);
     }
 
-    /**
-     * 材料を1件新規登録する。
-     *
-     * @PostMapping: HTTPのPOSTメソッドでアクセスされた時にこのメソッドを実行する、という目印。
-     *               POSTは「新しいデータを送って登録する」際に使うのが一般的な約束事。
-     *               ブラウザにURLを打つだけでは試せず、curlやPostmanなどのツールが必要になる。
-     *
-     * @RequestBody Material material: HTTPリクエストの本文(JSON形式)を、
-     *              自動的にMaterialオブジェクトに変換して受け取る、という意味。
-     *              例えば {"name":"米粉","category":"RAW","baseUnit":"WEIGHT","mainMaterial":true}
-     *              というJSONが送られてきたら、それぞれの値がMaterialのフィールドに詰められる。
-     *
-     * ResponseEntity<Material>: レスポンスの中身(登録された材料の情報)に加えて、
-     *              HTTPステータスコード(処理が成功したかどうかを表す数字)も
-     *              合わせて返すための入れ物。
-     *              HttpStatus.CREATED は「201番、新規作成に成功しました」という意味のコード。
-     *              (単に material をそのまま返すだけでもJSONは返せるが、
-     *               ステータスコードまで明示することでAPIとしてより丁寧な作りになる)
-     */
     @PostMapping
     public ResponseEntity<Material> create(@RequestBody Material material) {
         Material created = materialService.createMaterial(material);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    /** 材料の内容を編集する。 */
+    @PutMapping("/{materialId}")
+    public ResponseEntity<Material> update(
+            @PathVariable Long materialId,
+            @RequestBody Material material) {
+        Material updated = materialService.updateMaterial(materialId, material);
+        return ResponseEntity.ok(updated);
+    }
+
+    /** 材料を廃版(論理削除)にする。 */
+    @PostMapping("/{materialId}/deactivate")
+    public ResponseEntity<Void> deactivate(@PathVariable Long materialId) {
+        materialService.deactivateMaterial(materialId);
+        return ResponseEntity.ok().build();
+    }
+
+    /** 廃版にした材料を有効な状態に戻す。 */
+    @PostMapping("/{materialId}/reactivate")
+    public ResponseEntity<Void> reactivate(@PathVariable Long materialId) {
+        materialService.reactivateMaterial(materialId);
+        return ResponseEntity.ok().build();
     }
 }

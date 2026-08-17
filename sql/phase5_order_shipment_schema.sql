@@ -9,14 +9,15 @@ USE food_factory_dx;
 
 -- -----------------------------------------------------
 -- 取引先マスタ
--- required_residual_ratio: 出荷時に必要な賞味期限の残存割合(例: 2/3ルールなら0.6666)。
--- 指定が無い取引先(主にB2C)はNULLのままでよい。
--- -----------------------------------------------------
+-- required_residual_days: 出荷時に必要な賞味期限の残存日数(例: 66日以上残っている必要がある)。
+-- 割合(%)ではなく日数で持たせている理由: 現場が実際に判断する基準は
+-- 「あと何日残っているか」であり、割合は商品ごとに賞味期限日数が違うと
+-- 都度換算が必要になり直感的でないため(要件定義書 8.9節を参照)。
 CREATE TABLE customer (
   customer_id             BIGINT AUTO_INCREMENT PRIMARY KEY,
   name                    VARCHAR(100) NOT NULL,
   customer_type           ENUM('B2B', 'B2C') NOT NULL,
-  required_residual_ratio DECIMAL(4, 3) NULL COMMENT '出荷時に必要な残存期限の割合(0〜1)。指定なしはNULL',
+  required_residual_days  INT NULL COMMENT '出荷時に必要な残存期限の日数。指定なしはNULL',
   created_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

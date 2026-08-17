@@ -9,15 +9,15 @@
         <id column="customer_id" property="customerId"/>
         <result column="name" property="name"/>
         <result column="customer_type" property="customerType"/>
-        <result column="required_residual_ratio" property="requiredResidualRatio"/>
+        <result column="required_residual_days" property="requiredResidualDays"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
     </resultMap>
 
     <insert id="insert" parameterType="com.foodfactory.dx.domain.Customer"
             useGeneratedKeys="true" keyProperty="customerId">
-        INSERT INTO customer (name, customer_type, required_residual_ratio)
-        VALUES (#{name}, #{customerType}, #{requiredResidualRatio})
+        INSERT INTO customer (name, customer_type, required_residual_days)
+        VALUES (#{name}, #{customerType}, #{requiredResidualDays})
     </insert>
 
     <select id="findById" resultMap="customerResultMap">
@@ -27,5 +27,13 @@
     <select id="findAll" resultMap="customerResultMap">
         SELECT * FROM customer ORDER BY customer_id
     </select>
+
+    <update id="update" parameterType="com.foodfactory.dx.domain.Customer">
+        UPDATE customer
+        SET name                    = #{name},
+            customer_type           = #{customerType},
+            required_residual_days  = #{requiredResidualDays}
+        WHERE customer_id = #{customerId}
+    </update>
 
 </mapper>

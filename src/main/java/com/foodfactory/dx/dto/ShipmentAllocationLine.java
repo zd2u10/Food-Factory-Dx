@@ -8,16 +8,16 @@ public class ShipmentAllocationLine {
 
     private Long batchId;
     private LocalDate batchDate;
-    private BigDecimal residualRatio; // このバッチの、出荷予定日時点での残存期限の割合(0〜1)
+    private int residualDays; // このバッチの、出荷予定日時点での残存期限の日数
     private BigDecimal allocatedQty;
 
     public ShipmentAllocationLine() {
     }
 
-    public ShipmentAllocationLine(Long batchId, LocalDate batchDate, BigDecimal residualRatio, BigDecimal allocatedQty) {
+    public ShipmentAllocationLine(Long batchId, LocalDate batchDate, int residualDays, BigDecimal allocatedQty) {
         this.batchId = batchId;
         this.batchDate = batchDate;
-        this.residualRatio = residualRatio;
+        this.residualDays = residualDays;
         this.allocatedQty = allocatedQty;
     }
 
@@ -37,12 +37,12 @@ public class ShipmentAllocationLine {
         this.batchDate = batchDate;
     }
 
-    public BigDecimal getResidualRatio() {
-        return residualRatio;
+    public int getResidualDays() {
+        return residualDays;
     }
 
-    public void setResidualRatio(BigDecimal residualRatio) {
-        this.residualRatio = residualRatio;
+    public void setResidualDays(int residualDays) {
+        this.residualDays = residualDays;
     }
 
     public BigDecimal getAllocatedQty() {

@@ -22,4 +22,12 @@ public class CarrierService {
     public List<Carrier> listCarriers() {
         return carrierMapper.findAll();
     }
+
+    public Carrier updateCarrier(Long carrierId, Carrier carrier) {
+        carrierMapper.findById(carrierId)
+                .orElseThrow(() -> new IllegalArgumentException("指定された配送会社が見つかりません: carrierId=" + carrierId));
+        carrier.setCarrierId(carrierId);
+        carrierMapper.update(carrier);
+        return carrier;
+    }
 }

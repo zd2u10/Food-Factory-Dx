@@ -14,4 +14,6 @@ public interface CustomerMapper {
     Optional<Customer> findById(@Param("customerId") Long customerId);
 
     List<Customer> findAll();
+
+    int update(Customer customer);
 }

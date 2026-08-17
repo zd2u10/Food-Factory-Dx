@@ -10,11 +10,6 @@
         <result column="item_id" property="itemId"/>
         <result column="material_id" property="materialId"/>
         <result column="use_qty" property="useQty"/>
-        <!--
-          allowed_origins は「カンマ区切りの1本の文字列」としてそのままDBに保存されているため、
-          特別な変換処理は不要で、他の文字列列と同じようにそのままマッピングできる。
-          リスト形式への変換(getAllowedOriginList)は、domainクラス側のメソッドで行っている。
-        -->
         <result column="allowed_origins" property="allowedOrigins"/>
         <result column="is_main_material" property="mainMaterial"/>
         <result column="is_liquid" property="liquid"/>
@@ -29,22 +24,17 @@
     </insert>
 
     <select id="findById" resultMap="recipeItemResultMap">
-        SELECT recipe_item_id, item_id, material_id, use_qty, allowed_origins, is_main_material, is_liquid,
-               created_at, updated_at
-        FROM recipe_item
-        WHERE recipe_item_id = #{recipeItemId}
+        SELECT * FROM recipe_item WHERE recipe_item_id = #{recipeItemId}
     </select>
 
     <select id="findByItemId" resultMap="recipeItemResultMap">
-        SELECT recipe_item_id, item_id, material_id, use_qty, allowed_origins, is_main_material, is_liquid,
-               created_at, updated_at
-        FROM recipe_item
-        WHERE item_id = #{itemId}
+        SELECT * FROM recipe_item WHERE item_id = #{itemId}
     </select>
 
     <update id="update" parameterType="com.foodfactory.dx.domain.RecipeItem">
         UPDATE recipe_item
-        SET use_qty          = #{useQty},
+        SET material_id      = #{materialId},
+            use_qty          = #{useQty},
             allowed_origins  = #{allowedOrigins},
             is_main_material = #{mainMaterial},
             is_liquid        = #{liquid}
@@ -52,9 +42,7 @@
     </update>
 
     <delete id="deleteById">
-        DELETE
-        FROM recipe_item
-        WHERE recipe_item_id = #{recipeItemId}
+        DELETE FROM recipe_item WHERE recipe_item_id = #{recipeItemId}
     </delete>
 
 </mapper>

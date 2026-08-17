@@ -18,7 +18,6 @@ import com.foodfactory.dx.mapper.OrderLineMapper;
 import com.foodfactory.dx.mapper.ShipmentLineMapper;
 import com.foodfactory.dx.mapper.ShipmentMapper;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -33,6 +32,11 @@ import org.springframework.transaction.annotation.Transactional;
  * 許可産地の代替を認めなかった材料側の方針と同様、
  * 残存期限ルールを満たさないバッチを現場判断で代替出荷することは許可しない
  * (要件定義書 3.2節の産地制約の方針、3.1節の残存期限ルールを踏襲)。
+ *
+ * 【残存期限ルールは「割合(%)」ではなく「日数」で判定する】
+ * 以前は取引先ごとに割合(0〜1)を持たせていたが、現場が実際に判断する基準は
+ * 「あと何日残っているか」であり、割合は商品ごとに賞味期限日数が違うと
+ * 都度換算が必要で直感的でなかったため、日数ベースの判定に変更した(要件定義書 8.9節)。
  */
 @Service
 public class ShipmentService {
@@ -96,26 +100,24 @@ public class ShipmentService {
         List<ManufacturingBatch> candidates =
                 manufacturingBatchMapper.findShippableByItemIdOrderByBatchDate(orderLine.getItemId());
 
-        int shelfLifeDays = item.getShelfLifeDays();
-
         for (ManufacturingBatch batch : candidates) {
             if (remainingNeed.compareTo(BigDecimal.ZERO) <= 0) {
                 break;
             }
 
-            // 残存期限の割合を計算する(computeResidualRatioは登録処理側とも共通)。
-            BigDecimal residualRatio = computeResidualRatio(batch, shelfLifeDays);
+            // 残存日数を計算する(computeResidualDaysは登録処理側とも共通)。
+            int residualDays = computeResidualDays(batch, item.getShelfLifeDays());
 
-            // 取引先が残存期限の割合を指定している場合、それを下回るバッチは候補から除外する
+            // 取引先が残存期限の日数を指定している場合、それを下回るバッチは候補から除外する
             // (現場判断での代替は許可しない。要件定義書の産地制約と同じ方針)。
-            if (customer.getRequiredResidualRatio() != null
-                    && residualRatio.compareTo(customer.getRequiredResidualRatio()) < 0) {
+            if (customer.getRequiredResidualDays() != null
+                    && residualDays < customer.getRequiredResidualDays()) {
                 continue;
             }
 
             BigDecimal allocate = batch.getRemainingQty().min(remainingNeed);
             result.getLines().add(new ShipmentAllocationLine(
-                    batch.getBatchId(), batch.getBatchDate(), residualRatio, allocate));
+                    batch.getBatchId(), batch.getBatchDate(), residualDays, allocate));
             remainingNeed = remainingNeed.subtract(allocate);
         }
 
@@ -134,9 +136,7 @@ public class ShipmentService {
      * 【重要】previewShipmentAllocation(プレビュー)で行っている残存期限ルールの判定を、
      * この登録処理でも必ず同様に行う。プレビューだけでチェックし、実際の登録処理では
      * チェックしない、という作りにすると、プレビューの警告を無視してそのまま
-     * 不適合なバッチを登録できてしまう抜け穴になるため
-     * (実際にテスト中に発生した不具合: 残存期限ルールを満たさないはずのバッチが
-     *  registerShipmentLines経由では登録できてしまっていた)。
+     * 不適合なバッチを登録できてしまう抜け穴になるため。
      */
     @Transactional
     public void registerShipmentLines(Long shipmentId, Long orderLineId, List<BatchAllocationInput> allocations) {
@@ -145,7 +145,6 @@ public class ShipmentService {
         OrderLine orderLine = orderLineMapper.findById(orderLineId)
                 .orElseThrow(() -> new IllegalArgumentException("指定された受注明細が見つかりません: orderLineId=" + orderLineId));
 
-        // 残存期限ルールの判定に必要な情報(取引先の要求水準、商品の賞味期限日数)を先に取得しておく。
         CustomerOrder order = customerOrderMapper.findById(orderLine.getOrderId())
                 .orElseThrow(() -> new IllegalArgumentException("指定された受注が見つかりません: orderId=" + orderLine.getOrderId()));
         Customer customer = customerMapper.findById(order.getCustomerId())
@@ -169,15 +168,15 @@ public class ShipmentService {
                                 + ", 現在の状態=" + batch.getStatus());
             }
 
-            // 残存期限ルールの検証。プレビューと全く同じ計算式を使う(computeResidualRatio)。
+            // 残存期限ルールの検証。プレビューと全く同じ計算式を使う(computeResidualDays)。
             // 現場判断での代替は許可しないため、満たさない場合は登録そのものをブロックする。
-            if (customer.getRequiredResidualRatio() != null) {
-                BigDecimal residualRatio = computeResidualRatio(batch, item.getShelfLifeDays());
-                if (residualRatio.compareTo(customer.getRequiredResidualRatio()) < 0) {
+            if (customer.getRequiredResidualDays() != null) {
+                int residualDays = computeResidualDays(batch, item.getShelfLifeDays());
+                if (residualDays < customer.getRequiredResidualDays()) {
                     throw new IllegalArgumentException(
                             "このバッチ(batchId=" + batch.getBatchId() + ")は取引先の残存期限ルール"
-                                    + "(" + customer.getRequiredResidualRatio() + ")を満たしていません。"
-                                    + "残存率=" + residualRatio);
+                                    + "(" + customer.getRequiredResidualDays() + "日以上)を満たしていません。"
+                                    + "残存日数=" + residualDays + "日");
                 }
             }
 
@@ -197,14 +196,13 @@ public class ShipmentService {
     }
 
     /**
-     * バッチの残存期限の割合を計算する: (賞味期限日数 - 経過日数) ÷ 賞味期限日数。
+     * バッチの残存期限の日数を計算する: 賞味期限日数 - 経過日数。
      * previewShipmentAllocationとregisterShipmentLinesの両方から呼ばれる共通ロジック
      * (プレビューと登録時の判定基準が食い違うことを防ぐため、計算式を1箇所にまとめている)。
      */
-    private BigDecimal computeResidualRatio(ManufacturingBatch batch, int shelfLifeDays) {
+    private int computeResidualDays(ManufacturingBatch batch, int shelfLifeDays) {
         long elapsedDays = ChronoUnit.DAYS.between(batch.getBatchDate(), LocalDate.now());
-        return BigDecimal.valueOf(shelfLifeDays - elapsedDays)
-                .divide(BigDecimal.valueOf(shelfLifeDays), 4, RoundingMode.HALF_UP);
+        return (int) (shelfLifeDays - elapsedDays);
     }
 
     /**
