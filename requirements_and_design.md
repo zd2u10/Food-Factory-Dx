@@ -252,13 +252,18 @@ DRAFT → PLAN → MANUFACTURING → COMPLETED(通常/軽微な不良を含む)
    製造日が古い順に取得する
    (賞味期限 = 製造日 + shelf_life_days で、shelf_life_daysは商品ごとに固定のため、
     製造日が古い順に並べることがそのまま期限が近い順(FEFO)と一致する)
-2. 各バッチの残存期限の割合を計算する:
-   残存率 = (賞味期限日数 − 経過日数) ÷ 賞味期限日数
-3. 取引先(customer)が残存期限の割合(required_residual_ratio)を指定している場合、
+2. 各バッチの残存期限の日数を計算する:
+   残存日数 = 賞味期限日数 − 経過日数
+3. 取引先(customer)が残存期限の日数(required_residual_days)を指定している場合、
    それを下回るバッチは候補から除外する(現場判断での代替は許可しない。
    材料側の産地制約と同じ方針)
 4. 必要量に達するまで、期限が近い順にバッチを引き当てる
 5. 満たすバッチだけでは必要量に届かない場合は shortage=true とし、登録をブロックする
+
+【修正履歴】初版はrequired_residual_ratio(0〜1の割合)で判定していたが、
+現場が実際に判断する基準は「あと何日残っているか」であり、割合は商品ごとに
+賞味期限日数が違うと都度換算が必要で直感的でなかったため、
+required_residual_days(日数)による判定に変更した(8.9節を参照)。
 
 【重要】この判定(3〜5)は、プレビュー(previewShipmentAllocation)だけでなく、
 実際の登録処理(registerShipmentLines)でも必ず同様に行う。
@@ -291,7 +296,7 @@ DRAFT → PLAN → MANUFACTURING → COMPLETED(通常/軽微な不良を含む)
 | 2 | 製造管理(コア機能、手動Draft〜完了) | manufacturing_batch, batch_material_usage | 実装済み・検証済み |
 | 3 | 保留・交換・手動調整(例外処理群) | hold_resolution, stock_adjustment | 実装済み・検証済み |
 | 5 | 注文管理(受注〜出荷) | customer, customer_order, order_line, carrier, shipment, shipment_line | 実装済み・検証済み |
-| 4 | MRP自動化 | mrp_run, manufacturing_batch.origin_type | 未着手 |
+| 4 | MRP自動化 | mrp_run, manufacturing_batch.origin_type | 実装済み(未検証) |
 | 6 | 残存期限ルール・出荷FEFOの高度化 | customer.required_residual_ratio | フェーズ5に統合済み(実装・検証済み) |
 
 **実装順序の変更**: 当初のロードマップではフェーズ4→5の順だったが、MRPの需要計算式(受注残を参照)がフェーズ5のテーブルに依存するため、実装順序をフェーズ5→4に入れ替えた(ブランチ名は`phase5`のまま運用)。またフェーズ6(残存期限ルール)は、独立した高度化ステップとしてではなく、フェーズ5の出荷FEFO選定ロジックに最初から組み込む形で実装した。
@@ -410,6 +415,27 @@ material_arrivalヘッダーを経由しないため、この構造変更によ�
 - 受注のキャンセルは在庫プール型(ステータスを`CANCELLED`に変更するのみ)で実装し、
   設計通りバッチとの紐付け解除処理等は不要だった
 
+### 8.9 残存期限ルールを「割合」から「日数」に変更
+
+フロント実装時、`customer.requiredResidualRatio`(0〜1の割合)の入力欄が、
+現場の利用者にとって「何を入力すべきか分かりにくい」ことが判明した。
+割合は商品ごとに賞味期限日数が違うと都度換算が必要であり、現場が実際に判断する基準は
+「あと何日残っているか」という日数そのものだったため、以下の通り変更した。
+
+```
+customer.required_residual_ratio(DECIMAL、0〜1の割合) を廃止し、
+customer.required_residual_days(INT、日数)に置き換えた
+```
+
+影響範囲: `Customer.java`・`CustomerMapper.xml`(項目の置き換え)、
+`ShipmentService.computeResidualRatio`(割合を返す関数)を
+`computeResidualDays`(日数を返す関数)に変更、判定ロジックも
+「割合の比較」から「日数の比較」に変更。`ShipmentAllocationLine`(DTO)の
+`residualRatio`も`residualDays`に変更した。
+
+この変更により、フロント側の入力フォームは「%⇔小数の変換」処理が不要になり、
+むしろシンプルになった。
+
 ---
 
 ## 9. 改訂履歴
@@ -419,3 +445,5 @@ material_arrivalヘッダーを経由しないため、この構造変更によ�
 | v1 | 要件定義・全体設計を初版として作成 |
 | v2 | フェーズ0・1の実装内容を反映。MyBatis採用、material_arrival/material_lotの設計修正を追記 |
 | v3 | フェーズ0〜3・5の全機能を実データで検証完了。material_id/order_idの明細側移動、出荷FEFO・残存期限ルールの実装と不具合修正、実装順序の入れ替え(5→4)を反映 |
+| v4 | フェーズ4(MRP自動化)を実装。二重控除していた計算式を修正。CANCELLEDステータスとEVENT即時再計算を追加 |
+| v5 | マスタ管理フロント実装(材料・商品・レシピ・産地・取引先・配送会社)。material/itemsの論理削除、加水基準値の主原料連動計算、レシピの複数産地対応(チェックボックス化)を追加。残存期限ルールを割合(%)から日数ベースに変更 |
