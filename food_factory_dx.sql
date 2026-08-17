@@ -1,4 +1,4 @@
--- MySQL dump 10.13  Distrib 8.0.25, for Win64 (x86_64)
+-- MySQL dump 10.13  Distrib 8.0.23, for Win64 (x86_64)
 --
 -- Host: 127.0.0.1    Database: food_factory_dx
 -- ------------------------------------------------------
@@ -37,7 +37,7 @@ CREATE TABLE `batch_material_usage` (
   KEY `fk_bmu_lot` (`material_lot_id`),
   CONSTRAINT `fk_bmu_batch` FOREIGN KEY (`batch_id`) REFERENCES `manufacturing_batch` (`batch_id`),
   CONSTRAINT `fk_bmu_lot` FOREIGN KEY (`material_lot_id`) REFERENCES `material_lot` (`lot_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -46,7 +46,7 @@ CREATE TABLE `batch_material_usage` (
 
 LOCK TABLES `batch_material_usage` WRITE;
 /*!40000 ALTER TABLE `batch_material_usage` DISABLE KEYS */;
-INSERT INTO `batch_material_usage` VALUES (1,1,1,15000.00,15000.00,'CONSUMPTION',NULL,'2026-07-28 00:13:53','2026-07-28 00:13:53'),(2,2,3,15000.00,15000.00,'CONSUMPTION',NULL,'2026-07-29 00:37:43','2026-07-29 00:37:43');
+INSERT INTO `batch_material_usage` VALUES (1,1,1,15000.00,15000.00,'CONSUMPTION',NULL,'2026-07-27 04:48:19','2026-07-27 04:48:19');
 /*!40000 ALTER TABLE `batch_material_usage` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -63,7 +63,7 @@ CREATE TABLE `carrier` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`carrier_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -72,7 +72,7 @@ CREATE TABLE `carrier` (
 
 LOCK TABLES `carrier` WRITE;
 /*!40000 ALTER TABLE `carrier` DISABLE KEYS */;
-INSERT INTO `carrier` VALUES (1,'配送会社A','2026-07-29 00:18:03','2026-07-29 00:18:03');
+INSERT INTO `carrier` VALUES (1,'AA運送会社','2026-08-15 06:48:22','2026-08-15 06:48:22'),(2,'BB運送会社','2026-08-15 06:48:29','2026-08-15 06:48:29');
 /*!40000 ALTER TABLE `carrier` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -87,11 +87,11 @@ CREATE TABLE `customer` (
   `customer_id` bigint NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `customer_type` enum('B2B','B2C') NOT NULL,
-  `required_residual_ratio` decimal(4,3) DEFAULT NULL COMMENT '出荷時に必要な残存期限の割合(0〜1)。指定なしはNULL',
+  `required_residual_days` int DEFAULT NULL COMMENT '出荷時に必要な残存期限の日数。指定なしはNULL',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`customer_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -100,7 +100,7 @@ CREATE TABLE `customer` (
 
 LOCK TABLES `customer` WRITE;
 /*!40000 ALTER TABLE `customer` DISABLE KEYS */;
-INSERT INTO `customer` VALUES (1,'大手スーパーA','B2B',0.666,'2026-07-29 00:17:37','2026-07-29 00:17:37'),(2,'超厳格取引先','B2B',0.990,'2026-07-29 00:34:12','2026-07-29 00:34:12');
+INSERT INTO `customer` VALUES (1,'取引先A','B2B',60,'2026-08-15 09:21:39','2026-08-15 09:23:09'),(2,'取引先B','B2B',60,'2026-08-15 09:21:46','2026-08-15 09:21:46'),(3,'テスト取引先(緩い基準)','B2B',10,'2026-08-15 09:25:47','2026-08-15 09:25:47'),(4,'テスト取引先(厳しい基準)','B2B',80,'2026-08-15 09:29:35','2026-08-15 09:29:35');
 /*!40000 ALTER TABLE `customer` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -123,7 +123,7 @@ CREATE TABLE `customer_order` (
   PRIMARY KEY (`order_id`),
   KEY `fk_co_customer` (`customer_id`),
   CONSTRAINT `fk_co_customer` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`customer_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -132,7 +132,7 @@ CREATE TABLE `customer_order` (
 
 LOCK TABLES `customer_order` WRITE;
 /*!40000 ALTER TABLE `customer_order` DISABLE KEYS */;
-INSERT INTO `customer_order` VALUES (1,1,'2026-07-29','2026-08-02','COMPLETED',NULL,'2026-07-29 00:18:42','2026-07-29 00:31:51'),(2,2,'2026-07-29',NULL,'COMPLETED',NULL,'2026-07-29 00:35:09','2026-07-29 00:42:15'),(3,1,'2026-07-29',NULL,'NEW',NULL,'2026-07-29 00:39:42','2026-07-29 00:39:42'),(4,1,'2026-07-29',NULL,'CANCELLED',NULL,'2026-07-29 01:01:26','2026-07-29 01:02:10'),(5,1,'2026-08-01',NULL,'NEW',NULL,'2026-08-03 03:25:17','2026-08-03 03:25:17');
+INSERT INTO `customer_order` VALUES (1,3,'2026-08-15',NULL,'COMPLETED',NULL,'2026-08-15 09:27:42','2026-08-15 09:33:35'),(2,4,'2026-08-15',NULL,'NEW',NULL,'2026-08-15 09:29:52','2026-08-15 09:29:52');
 /*!40000 ALTER TABLE `customer_order` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -158,7 +158,7 @@ CREATE TABLE `hold_resolution` (
   KEY `fk_hr_resolved_line` (`resolved_line_id`),
   CONSTRAINT `fk_hr_line` FOREIGN KEY (`line_id`) REFERENCES `material_arrival_line` (`line_id`),
   CONSTRAINT `fk_hr_resolved_line` FOREIGN KEY (`resolved_line_id`) REFERENCES `material_arrival_line` (`line_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -167,7 +167,7 @@ CREATE TABLE `hold_resolution` (
 
 LOCK TABLES `hold_resolution` WRITE;
 /*!40000 ALTER TABLE `hold_resolution` DISABLE KEYS */;
-INSERT INTO `hold_resolution` VALUES (1,2,15000.00,'ACCEPTED_LATE',NULL,'RESOLVED','再検査の結果、異物混入は誤検知と判明。受け入れ可能と判断','2026-07-28 00:15:44','2026-07-28 00:17:09'),(2,3,15000.00,'RETURNED',NULL,'RESOLVED','箱破損のため仕入先に返品、交換なし','2026-07-28 00:27:01','2026-07-28 00:27:36'),(3,4,15000.00,'EXCHANGED',5,'RESOLVED','交換品(line_id=5)を受け入れて対応','2026-07-28 00:35:49','2026-07-28 00:38:14'),(4,6,15000.00,'RETURNED',NULL,'RESOLVED','破損のため仕入先に返品、交換なし','2026-07-28 00:43:11','2026-07-28 00:44:50');
+INSERT INTO `hold_resolution` VALUES (1,2,15000.00,NULL,NULL,'ON_HOLD',NULL,'2026-07-27 10:28:31','2026-07-27 10:28:31');
 /*!40000 ALTER TABLE `hold_resolution` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -185,10 +185,15 @@ CREATE TABLE `items` (
   `target_stock_qty` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '目標在庫(将来拡張用)',
   `standard_batch_qty` decimal(10,2) NOT NULL COMMENT '1バッチあたりの標準製造数(季節変動込み平均値)',
   `shelf_life_days` int NOT NULL DEFAULT '90' COMMENT '賞味期限日数',
+  `hydration_ratio_min` decimal(5,2) DEFAULT NULL COMMENT '加水率の下限(%)。職人が試作の上で確立した、季節変動込みの基準値',
+  `hydration_ratio_max` decimal(5,2) DEFAULT NULL COMMENT '加水率の上限(%)',
+  `hydration_qty_min` decimal(10,2) DEFAULT NULL COMMENT '加水量(溶液合計)の下限(ml)。主原料の使用量×加水率で算出した参考値',
+  `hydration_qty_max` decimal(10,2) DEFAULT NULL COMMENT '加水量(溶液合計)の上限(ml)',
+  `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT '有効/廃版フラグ。物理削除はせず、廃版になったらFALSEにする(論理削除)',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`item_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -197,7 +202,7 @@ CREATE TABLE `items` (
 
 LOCK TABLES `items` WRITE;
 /*!40000 ALTER TABLE `items` DISABLE KEYS */;
-INSERT INTO `items` VALUES (1,'うどん',500.00,500.00,198.00,90,'2026-07-28 00:08:54','2026-07-28 00:08:54'),(2,'ラーメンウェーブ',500.00,500.00,198.00,90,'2026-07-28 00:09:04','2026-07-28 00:09:04');
+INSERT INTO `items` VALUES (1,'うどん',500.00,500.00,198.00,90,NULL,NULL,NULL,NULL,1,'2026-07-27 04:40:22','2026-08-10 11:22:47'),(2,'ラーメンウェーブ',500.00,500.00,198.00,90,NULL,NULL,NULL,NULL,1,'2026-07-27 04:40:29','2026-07-27 04:40:29'),(3,'玄米うどん',198.00,198.00,500.00,90,NULL,NULL,NULL,NULL,1,'2026-08-10 14:39:32','2026-08-10 14:39:32');
 /*!40000 ALTER TABLE `items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -233,7 +238,7 @@ CREATE TABLE `manufacturing_batch` (
   KEY `fk_mb_mrp_run` (`mrp_run_id`),
   CONSTRAINT `fk_mb_item` FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`),
   CONSTRAINT `fk_mb_mrp_run` FOREIGN KEY (`mrp_run_id`) REFERENCES `mrp_run` (`run_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -242,7 +247,7 @@ CREATE TABLE `manufacturing_batch` (
 
 LOCK TABLES `manufacturing_batch` WRITE;
 /*!40000 ALTER TABLE `manufacturing_batch` DISABLE KEYS */;
-INSERT INTO `manufacturing_batch` VALUES (1,1,NULL,'2026-07-27',1,'COMPLETED','MANUAL','テスト太郎',198.00,198.00,195.00,15.00,0,3.00,'検品時に3個、成形不良を確認',NULL,NULL,'2026-07-28 00:12:25','2026-07-29 00:42:15'),(2,1,NULL,'2026-07-29',1,'COMPLETED','MANUAL','テスト太郎',198.00,198.00,198.00,198.00,0,0.00,NULL,NULL,NULL,'2026-07-29 00:37:15','2026-07-29 00:39:07'),(3,1,1,'2026-08-03',1,'PLAN','MRP_AUTO',NULL,198.00,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,'2026-08-03 03:30:13','2026-08-03 03:41:06'),(4,1,1,'2026-08-03',2,'CANCELLED','MRP_AUTO',NULL,198.00,NULL,NULL,NULL,0,NULL,NULL,NULL,'テスト取り消し','2026-08-03 03:30:13','2026-08-03 03:30:35'),(5,1,1,'2026-08-03',3,'PLAN','MRP_AUTO',NULL,198.00,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,'2026-08-03 03:30:13','2026-08-03 03:41:06'),(6,1,1,'2026-08-03',4,'PLAN','MRP_AUTO',NULL,198.00,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,'2026-08-03 03:30:13','2026-08-03 03:41:06'),(7,1,1,'2026-08-03',5,'PLAN','MRP_AUTO',NULL,198.00,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,'2026-08-03 03:30:13','2026-08-03 03:41:06'),(8,2,1,'2026-08-03',1,'PLAN','MRP_AUTO',NULL,198.00,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,'2026-08-03 03:30:13','2026-08-03 03:41:06'),(9,2,1,'2026-08-03',2,'PLAN','MRP_AUTO',NULL,198.00,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,'2026-08-03 03:30:13','2026-08-03 03:41:06'),(10,2,1,'2026-08-03',3,'PLAN','MRP_AUTO',NULL,198.00,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,'2026-08-03 03:30:13','2026-08-03 03:41:06'),(11,1,2,'2026-08-03',6,'PLAN','MRP_AUTO',NULL,198.00,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,'2026-08-03 03:30:35','2026-08-03 03:41:06'),(12,1,NULL,'2026-08-03',7,'DRAFT','MANUAL','テスト太郎',198.00,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,'2026-08-03 03:42:25','2026-08-03 03:42:25');
+INSERT INTO `manufacturing_batch` VALUES (1,1,NULL,'2026-07-27',1,'COMPLETED','MANUAL','テスト太郎',198.00,198.00,195.00,185.00,0,3.00,'検品時に3個、成形不良を確認',NULL,NULL,'2026-07-27 04:46:37','2026-08-15 09:33:35');
 /*!40000 ALTER TABLE `manufacturing_batch` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -259,10 +264,11 @@ CREATE TABLE `material` (
   `category` enum('RAW','ADDITIVE') NOT NULL COMMENT 'RAW=原料 / ADDITIVE=添加物',
   `base_unit` enum('WEIGHT','VOLUME') NOT NULL COMMENT 'WEIGHT=重量(g) / VOLUME=体積(ml)',
   `is_main_material` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'ベーカーズパーセント計算の基準材料か',
+  `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT '有効/廃版フラグ。物理削除はせず、廃版になったらFALSEにする(論理削除)',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`material_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -271,7 +277,7 @@ CREATE TABLE `material` (
 
 LOCK TABLES `material` WRITE;
 /*!40000 ALTER TABLE `material` DISABLE KEYS */;
-INSERT INTO `material` VALUES (1,'米粉','RAW','WEIGHT',1,'2026-07-28 00:08:39','2026-07-28 00:08:39');
+INSERT INTO `material` VALUES (1,'米粉','RAW','WEIGHT',1,1,'2026-07-27 04:40:01','2026-08-10 02:23:13'),(2,'α米','ADDITIVE','WEIGHT',0,1,'2026-08-10 01:58:28','2026-08-10 02:23:49'),(3,'アルギン酸エステル','ADDITIVE','WEIGHT',0,1,'2026-08-10 02:00:09','2026-08-10 02:00:09'),(4,'キサンタンガム','ADDITIVE','WEIGHT',0,1,'2026-08-10 02:00:16','2026-08-10 02:00:16'),(5,'FKハイパー','ADDITIVE','VOLUME',0,1,'2026-08-10 02:00:25','2026-08-10 02:00:25'),(6,'酢','ADDITIVE','VOLUME',0,1,'2026-08-10 02:00:30','2026-08-10 02:00:30'),(7,'酒精','ADDITIVE','VOLUME',0,1,'2026-08-10 02:00:34','2026-08-10 02:00:34'),(8,'玄米粉','RAW','WEIGHT',1,1,'2026-08-10 05:08:50','2026-08-10 05:08:50'),(9,'クチナシ','ADDITIVE','WEIGHT',0,1,'2026-08-15 04:23:58','2026-08-15 04:23:58');
 /*!40000 ALTER TABLE `material` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -289,7 +295,7 @@ CREATE TABLE `material_arrival` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`arrival_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -298,7 +304,7 @@ CREATE TABLE `material_arrival` (
 
 LOCK TABLES `material_arrival` WRITE;
 /*!40000 ALTER TABLE `material_arrival` DISABLE KEYS */;
-INSERT INTO `material_arrival` VALUES (1,'仕入先A','2026-07-27','2026-07-28 00:09:52','2026-07-28 00:09:52'),(2,'仕入先A','2026-07-27','2026-07-28 00:15:18','2026-07-28 00:15:18'),(3,'仕入先A','2026-07-28','2026-07-28 00:22:40','2026-07-28 00:22:40'),(4,'仕入先A','2026-07-28','2026-07-28 00:35:23','2026-07-28 00:35:23'),(5,'仕入先A','2026-07-30','2026-07-28 00:37:36','2026-07-28 00:37:36'),(6,'仕入先A','2026-07-28','2026-07-28 00:42:29','2026-07-28 00:42:29');
+INSERT INTO `material_arrival` VALUES (1,'仕入先A','2026-07-27','2026-07-27 04:43:15','2026-07-27 04:43:15'),(2,'仕入先A','2026-07-27','2026-07-27 10:28:16','2026-07-27 10:28:16'),(3,'仕入れ先A','2026-08-16','2026-08-16 08:22:31','2026-08-16 08:22:31'),(4,'仕入れ先A','2026-08-16','2026-08-16 08:24:09','2026-08-16 08:24:09'),(5,'仕入れ先A','2026-08-16','2026-08-16 08:29:47','2026-08-16 08:29:47');
 /*!40000 ALTER TABLE `material_arrival` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -337,7 +343,7 @@ CREATE TABLE `material_arrival_line` (
   CONSTRAINT `fk_mal_exchange_source` FOREIGN KEY (`exchange_source_line_id`) REFERENCES `material_arrival_line` (`line_id`),
   CONSTRAINT `fk_mal_material` FOREIGN KEY (`material_id`) REFERENCES `material` (`material_id`),
   CONSTRAINT `fk_mal_order` FOREIGN KEY (`order_id`) REFERENCES `material_order` (`order_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -346,7 +352,7 @@ CREATE TABLE `material_arrival_line` (
 
 LOCK TABLES `material_arrival_line` WRITE;
 /*!40000 ALTER TABLE `material_arrival_line` DISABLE KEYS */;
-INSERT INTO `material_arrival_line` VALUES (1,1,1,1,'LOT-A','三重','2026-10-01',5,15000.00,75000.00,75000.00,0.00,1,1,1,NULL,'2026-07-28 00:10:08','2026-07-28 00:10:08'),(2,2,1,2,'LOT-B','三重','2026-10-15',3,15000.00,45000.00,45000.00,0.00,1,1,0,NULL,'2026-07-28 00:15:44','2026-07-28 00:17:09'),(3,3,1,3,'LOT-C','三重','2026-08-01',1,15000.00,15000.00,0.00,15000.00,0,1,1,NULL,'2026-07-28 00:27:01','2026-07-28 00:27:01'),(4,4,1,4,'LOT-D','三重','2026-08-05',1,15000.00,15000.00,0.00,15000.00,1,1,0,NULL,'2026-07-28 00:35:49','2026-07-28 00:35:49'),(5,5,1,NULL,'LOT-D-EXCHANGE','三重','2026-08-20',1,15000.00,15000.00,15000.00,0.00,1,1,1,4,'2026-07-28 00:38:14','2026-07-28 00:38:14'),(6,6,1,5,'LOT-E','三重','2026-08-10',1,15000.00,15000.00,0.00,15000.00,0,1,1,NULL,'2026-07-28 00:43:11','2026-07-28 00:43:11');
+INSERT INTO `material_arrival_line` VALUES (1,1,1,1,'LOT-A','三重','2026-10-01',5,15000.00,75000.00,75000.00,0.00,1,1,1,NULL,'2026-07-27 04:43:54','2026-07-27 04:43:54'),(2,2,1,2,'LOT-B','三重','2026-10-15',3,15000.00,45000.00,30000.00,15000.00,1,1,0,NULL,'2026-07-27 10:28:31','2026-07-27 10:28:31');
 /*!40000 ALTER TABLE `material_arrival_line` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -372,7 +378,7 @@ CREATE TABLE `material_lot` (
   KEY `fk_ml_material` (`material_id`),
   CONSTRAINT `fk_ml_arrival_line` FOREIGN KEY (`arrival_line_id`) REFERENCES `material_arrival_line` (`line_id`),
   CONSTRAINT `fk_ml_material` FOREIGN KEY (`material_id`) REFERENCES `material` (`material_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -381,7 +387,7 @@ CREATE TABLE `material_lot` (
 
 LOCK TABLES `material_lot` WRITE;
 /*!40000 ALTER TABLE `material_lot` DISABLE KEYS */;
-INSERT INTO `material_lot` VALUES (1,1,1,'LOT-A','三重','2026-10-01',59500.00,'2026-07-28 00:10:08','2026-07-28 00:47:58'),(2,1,2,'LOT-B','三重','2026-10-15',45000.00,'2026-07-28 00:15:44','2026-07-28 00:17:09'),(3,1,5,'LOT-D-EXCHANGE','三重','2026-08-20',0.00,'2026-07-28 00:38:14','2026-07-29 00:37:43');
+INSERT INTO `material_lot` VALUES (1,1,1,'LOT-A','三重','2026-10-01',60000.00,'2026-07-27 04:43:54','2026-07-27 04:48:19'),(2,1,2,'LOT-B','三重','2026-10-15',30000.00,'2026-07-27 10:28:31','2026-07-27 10:28:31');
 /*!40000 ALTER TABLE `material_lot` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -405,7 +411,7 @@ CREATE TABLE `material_order` (
   PRIMARY KEY (`order_id`),
   KEY `fk_mo_material` (`material_id`),
   CONSTRAINT `fk_mo_material` FOREIGN KEY (`material_id`) REFERENCES `material` (`material_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -414,7 +420,7 @@ CREATE TABLE `material_order` (
 
 LOCK TABLES `material_order` WRITE;
 /*!40000 ALTER TABLE `material_order` DISABLE KEYS */;
-INSERT INTO `material_order` VALUES (1,1,'仕入先A',45000.00,'2026-07-27',NULL,'FULLY_ARRIVED','2026-07-28 00:09:37','2026-07-28 00:10:08'),(2,1,'仕入先A',45000.00,'2026-07-27',NULL,'FULLY_ARRIVED','2026-07-28 00:15:08','2026-07-28 00:17:09'),(3,1,'仕入先A',15000.00,'2026-07-28',NULL,'NOT_ARRIVED','2026-07-28 00:22:26','2026-07-28 00:22:26'),(4,1,'仕入先A',15000.00,'2026-07-28',NULL,'NOT_ARRIVED','2026-07-28 00:34:56','2026-07-28 00:34:56'),(5,1,'仕入先A',15000.00,'2026-07-28',NULL,'NOT_ARRIVED','2026-07-28 00:41:41','2026-07-28 00:41:41');
+INSERT INTO `material_order` VALUES (1,1,'仕入先A',45000.00,'2026-07-27',NULL,'FULLY_ARRIVED','2026-07-27 04:42:48','2026-07-27 04:43:54'),(2,1,'仕入先A',45000.00,'2026-07-27',NULL,'PARTIALLY_ARRIVED','2026-07-27 10:28:02','2026-07-27 10:28:31'),(3,1,'仕入れ先A',150000.00,'2026-08-16','2026-08-18','NOT_ARRIVED','2026-08-16 08:21:15','2026-08-16 08:21:15');
 /*!40000 ALTER TABLE `material_order` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -436,7 +442,7 @@ CREATE TABLE `material_package_spec` (
   PRIMARY KEY (`spec_id`),
   UNIQUE KEY `uq_mps_material_origin` (`material_id`,`origin`),
   CONSTRAINT `fk_mps_material` FOREIGN KEY (`material_id`) REFERENCES `material` (`material_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -445,6 +451,7 @@ CREATE TABLE `material_package_spec` (
 
 LOCK TABLES `material_package_spec` WRITE;
 /*!40000 ALTER TABLE `material_package_spec` DISABLE KEYS */;
+INSERT INTO `material_package_spec` VALUES (1,1,'愛知',15000.00,'箱','2026-08-15 03:33:18','2026-08-15 03:46:11'),(2,1,'三重',15000.00,'箱','2026-08-15 03:44:06','2026-08-15 03:46:25'),(3,1,'新潟',20000.00,'袋','2026-08-15 03:46:37','2026-08-15 03:46:37'),(4,8,'愛知',15000.00,'箱','2026-08-15 03:54:36','2026-08-15 03:54:36'),(5,8,'三重',15000.00,'箱','2026-08-15 03:54:43','2026-08-15 03:54:43');
 /*!40000 ALTER TABLE `material_package_spec` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -461,7 +468,7 @@ CREATE TABLE `mrp_run` (
   `triggered_by` enum('AUTO','MANUAL','EVENT') NOT NULL COMMENT 'AUTO=1日1回の定期実行, MANUAL=人による手動実行, EVENT=CANCELLED/REJECTED発生時の即時再計算',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`run_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -470,7 +477,6 @@ CREATE TABLE `mrp_run` (
 
 LOCK TABLES `mrp_run` WRITE;
 /*!40000 ALTER TABLE `mrp_run` DISABLE KEYS */;
-INSERT INTO `mrp_run` VALUES (1,'2026-08-03 03:30:13','MANUAL','2026-08-03 03:30:13'),(2,'2026-08-03 03:30:35','EVENT','2026-08-03 03:30:35');
 /*!40000 ALTER TABLE `mrp_run` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -495,7 +501,7 @@ CREATE TABLE `order_line` (
   KEY `fk_ol_item` (`item_id`),
   CONSTRAINT `fk_ol_item` FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`),
   CONSTRAINT `fk_ol_order` FOREIGN KEY (`order_id`) REFERENCES `customer_order` (`order_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -504,7 +510,7 @@ CREATE TABLE `order_line` (
 
 LOCK TABLES `order_line` WRITE;
 /*!40000 ALTER TABLE `order_line` DISABLE KEYS */;
-INSERT INTO `order_line` VALUES (1,1,1,150.00,200.00,30000.00,'2026-07-29 00:19:24','2026-07-29 00:19:24'),(2,2,1,10.00,NULL,NULL,'2026-07-29 00:35:56','2026-07-29 00:35:56'),(3,3,1,60.00,NULL,NULL,'2026-07-29 00:40:02','2026-07-29 00:40:02'),(4,5,1,500.00,NULL,NULL,'2026-08-03 03:25:50','2026-08-03 03:25:50');
+INSERT INTO `order_line` VALUES (1,1,1,10.00,NULL,NULL,'2026-08-15 09:28:13','2026-08-15 09:28:13'),(2,2,1,10.00,NULL,NULL,'2026-08-15 09:30:10','2026-08-15 09:30:10');
 /*!40000 ALTER TABLE `order_line` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -530,7 +536,7 @@ CREATE TABLE `recipe_item` (
   KEY `fk_ri_material` (`material_id`),
   CONSTRAINT `fk_ri_item` FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`),
   CONSTRAINT `fk_ri_material` FOREIGN KEY (`material_id`) REFERENCES `material` (`material_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -539,7 +545,7 @@ CREATE TABLE `recipe_item` (
 
 LOCK TABLES `recipe_item` WRITE;
 /*!40000 ALTER TABLE `recipe_item` DISABLE KEYS */;
-INSERT INTO `recipe_item` VALUES (1,1,1,15000.00,'愛知,三重',1,0,'2026-07-28 00:09:16','2026-07-28 00:09:16');
+INSERT INTO `recipe_item` VALUES (2,1,1,15000.00,'三重,愛知',1,0,'2026-08-15 04:22:09','2026-08-15 04:22:09'),(3,1,2,1200.00,'',0,0,'2026-08-15 04:22:09','2026-08-15 04:22:09'),(4,1,3,75.00,'',0,0,'2026-08-15 04:22:09','2026-08-15 04:22:09'),(5,1,4,150.00,'',0,0,'2026-08-15 04:22:09','2026-08-15 04:22:09'),(6,1,5,81.00,'',0,1,'2026-08-15 04:22:09','2026-08-15 04:22:09'),(7,1,6,45.00,'',0,1,'2026-08-15 04:22:09','2026-08-15 04:22:09'),(8,1,7,450.00,'',0,1,'2026-08-15 04:22:09','2026-08-15 04:22:09'),(9,2,1,15000.00,'三重,愛知',1,0,'2026-08-15 04:25:30','2026-08-15 04:25:30'),(10,2,2,1200.00,'',0,0,'2026-08-15 04:25:30','2026-08-15 04:25:30'),(11,2,3,60.00,'',0,0,'2026-08-15 04:25:30','2026-08-15 04:25:30'),(12,2,4,150.00,'',0,0,'2026-08-15 04:25:30','2026-08-15 04:25:30'),(13,2,9,17.00,'',0,0,'2026-08-15 04:25:30','2026-08-15 04:25:30'),(14,2,5,81.00,'',0,1,'2026-08-15 04:25:30','2026-08-15 04:25:30'),(15,2,6,45.00,'',0,1,'2026-08-15 04:25:30','2026-08-15 04:25:30'),(16,2,7,450.00,'',0,1,'2026-08-15 04:25:30','2026-08-15 04:25:30');
 /*!40000 ALTER TABLE `recipe_item` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -561,7 +567,7 @@ CREATE TABLE `shipment` (
   PRIMARY KEY (`shipment_id`),
   KEY `fk_sh_carrier` (`carrier_id`),
   CONSTRAINT `fk_sh_carrier` FOREIGN KEY (`carrier_id`) REFERENCES `carrier` (`carrier_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -570,7 +576,7 @@ CREATE TABLE `shipment` (
 
 LOCK TABLES `shipment` WRITE;
 /*!40000 ALTER TABLE `shipment` DISABLE KEYS */;
-INSERT INTO `shipment` VALUES (1,1,'2026-07-29','大手スーパーA 配送センター','AMBIENT','2026-07-29 00:31:21','2026-07-29 00:31:21'),(2,1,'2026-07-29','テスト配送先','AMBIENT','2026-07-29 00:41:43','2026-07-29 00:41:43');
+INSERT INTO `shipment` VALUES (1,1,'2026-08-15','テスト配送先','AMBIENT','2026-08-15 09:31:08','2026-08-15 09:31:08');
 /*!40000 ALTER TABLE `shipment` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -605,7 +611,7 @@ CREATE TABLE `shipment_line` (
 
 LOCK TABLES `shipment_line` WRITE;
 /*!40000 ALTER TABLE `shipment_line` DISABLE KEYS */;
-INSERT INTO `shipment_line` VALUES (1,1,1,1,150.00,'2026-07-29 00:31:51','2026-07-29 00:31:51'),(2,2,2,1,30.00,'2026-07-29 00:42:15','2026-07-29 00:42:15');
+INSERT INTO `shipment_line` VALUES (1,1,1,1,5.00,'2026-08-15 09:31:42','2026-08-15 09:31:42'),(2,1,1,1,5.00,'2026-08-15 09:33:35','2026-08-15 09:33:35');
 /*!40000 ALTER TABLE `shipment_line` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -628,7 +634,7 @@ CREATE TABLE `stock_adjustment` (
   PRIMARY KEY (`adjustment_id`),
   KEY `fk_sa_lot` (`lot_id`),
   CONSTRAINT `fk_sa_lot` FOREIGN KEY (`lot_id`) REFERENCES `material_lot` (`lot_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -637,7 +643,6 @@ CREATE TABLE `stock_adjustment` (
 
 LOCK TABLES `stock_adjustment` WRITE;
 /*!40000 ALTER TABLE `stock_adjustment` DISABLE KEYS */;
-INSERT INTO `stock_adjustment` VALUES (1,2,30000.00,45000.00,'2026-07-28','hold_id=1 の保留対応(ACCEPTED_LATE)による在庫増加','2026-07-28 00:17:09','2026-07-28 00:17:09'),(2,1,60000.00,59500.00,'2026-07-28','棚卸しの結果、帳簿より500g少なかったため補正','2026-07-28 00:47:58','2026-07-28 00:47:58');
 /*!40000 ALTER TABLE `stock_adjustment` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -650,4 +655,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-08-03 14:16:44
+-- Dump completed on 2026-08-17  0:03:10
