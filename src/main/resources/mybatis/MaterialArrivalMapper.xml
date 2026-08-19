@@ -5,9 +5,10 @@
 
 <mapper namespace="com.foodfactory.dx.mapper.MaterialArrivalMapper">
 
+    <!-- supplierIdは新しいsupplier_ref_id列(supplier.supplierIdへの外部キー)にマッピングする。 -->
     <resultMap id="arrivalResultMap" type="com.foodfactory.dx.domain.MaterialArrival">
         <id column="arrival_id" property="arrivalId"/>
-        <result column="supplier_id" property="supplierId"/>
+        <result column="supplier_ref_id" property="supplierId"/>
         <result column="arrival_date" property="arrivalDate"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
@@ -15,20 +16,16 @@
 
     <insert id="insert" parameterType="com.foodfactory.dx.domain.MaterialArrival"
             useGeneratedKeys="true" keyProperty="arrivalId">
-        INSERT INTO material_arrival (supplier_id, arrival_date)
+        INSERT INTO material_arrival (supplier_ref_id, arrival_date)
         VALUES (#{supplierId}, #{arrivalDate})
     </insert>
 
     <select id="findById" resultMap="arrivalResultMap">
-        SELECT arrival_id, supplier_id, arrival_date, created_at, updated_at
-        FROM material_arrival
-        WHERE arrival_id = #{arrivalId}
+        SELECT * FROM material_arrival WHERE arrival_id = #{arrivalId}
     </select>
 
     <select id="findAll" resultMap="arrivalResultMap">
-        SELECT arrival_id, supplier_id, arrival_date, created_at, updated_at
-        FROM material_arrival
-        ORDER BY arrival_id
+        SELECT * FROM material_arrival ORDER BY arrival_id
     </select>
 
 </mapper>

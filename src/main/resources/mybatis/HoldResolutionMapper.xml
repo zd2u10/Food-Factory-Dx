@@ -31,6 +31,18 @@
         SELECT * FROM hold_resolution WHERE status = #{status} ORDER BY created_at
     </select>
 
+    <select id="findAll" resultMap="holdResultMap">
+        SELECT * FROM hold_resolution ORDER BY created_at DESC
+    </select>
+
+    <select id="findByOrderId" resultMap="holdResultMap">
+        SELECT hr.*
+        FROM hold_resolution hr
+                 JOIN material_arrival_line mal ON hr.line_id = mal.line_id
+        WHERE mal.order_id = #{orderId}
+        ORDER BY hr.created_at DESC
+    </select>
+
     <update id="resolve">
         UPDATE hold_resolution
         SET status          = 'RESOLVED',

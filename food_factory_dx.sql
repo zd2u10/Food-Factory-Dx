@@ -1,4 +1,4 @@
--- MySQL dump 10.13  Distrib 8.0.23, for Win64 (x86_64)
+-- MySQL dump 10.13  Distrib 8.0.25, for Win64 (x86_64)
 --
 -- Host: 127.0.0.1    Database: food_factory_dx
 -- ------------------------------------------------------
@@ -167,7 +167,7 @@ CREATE TABLE `hold_resolution` (
 
 LOCK TABLES `hold_resolution` WRITE;
 /*!40000 ALTER TABLE `hold_resolution` DISABLE KEYS */;
-INSERT INTO `hold_resolution` VALUES (1,2,15000.00,NULL,NULL,'ON_HOLD',NULL,'2026-07-27 10:28:31','2026-07-27 10:28:31');
+INSERT INTO `hold_resolution` VALUES (1,2,15000.00,'RETURNED',NULL,'RESOLVED','内部包装の破損','2026-07-27 10:28:31','2026-08-17 01:12:51');
 /*!40000 ALTER TABLE `hold_resolution` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -295,7 +295,7 @@ CREATE TABLE `material_arrival` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`arrival_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -304,7 +304,7 @@ CREATE TABLE `material_arrival` (
 
 LOCK TABLES `material_arrival` WRITE;
 /*!40000 ALTER TABLE `material_arrival` DISABLE KEYS */;
-INSERT INTO `material_arrival` VALUES (1,'仕入先A','2026-07-27','2026-07-27 04:43:15','2026-07-27 04:43:15'),(2,'仕入先A','2026-07-27','2026-07-27 10:28:16','2026-07-27 10:28:16'),(3,'仕入れ先A','2026-08-16','2026-08-16 08:22:31','2026-08-16 08:22:31'),(4,'仕入れ先A','2026-08-16','2026-08-16 08:24:09','2026-08-16 08:24:09'),(5,'仕入れ先A','2026-08-16','2026-08-16 08:29:47','2026-08-16 08:29:47');
+INSERT INTO `material_arrival` VALUES (1,'仕入先A','2026-07-27','2026-07-27 04:43:15','2026-07-27 04:43:15'),(2,'仕入先A','2026-07-27','2026-07-27 10:28:16','2026-07-27 10:28:16'),(3,'仕入れ先A','2026-08-16','2026-08-16 08:22:31','2026-08-16 08:22:31'),(4,'仕入れ先A','2026-08-16','2026-08-16 08:24:09','2026-08-16 08:24:09'),(5,'仕入れ先A','2026-08-16','2026-08-16 08:29:47','2026-08-16 08:29:47'),(6,'仕入れ先A','2026-08-17','2026-08-17 01:28:42','2026-08-17 01:28:42'),(7,'仕入先A','2026-08-17','2026-08-17 02:11:54','2026-08-17 02:11:54'),(8,'仕入先A','2026-08-16','2026-08-17 02:13:52','2026-08-17 02:13:52'),(9,'仕入先A','2026-08-17','2026-08-17 02:16:48','2026-08-17 02:16:48'),(10,'仕入先A','2026-08-17','2026-08-17 06:11:18','2026-08-17 06:11:18');
 /*!40000 ALTER TABLE `material_arrival` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -343,7 +343,7 @@ CREATE TABLE `material_arrival_line` (
   CONSTRAINT `fk_mal_exchange_source` FOREIGN KEY (`exchange_source_line_id`) REFERENCES `material_arrival_line` (`line_id`),
   CONSTRAINT `fk_mal_material` FOREIGN KEY (`material_id`) REFERENCES `material` (`material_id`),
   CONSTRAINT `fk_mal_order` FOREIGN KEY (`order_id`) REFERENCES `material_order` (`order_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -352,7 +352,7 @@ CREATE TABLE `material_arrival_line` (
 
 LOCK TABLES `material_arrival_line` WRITE;
 /*!40000 ALTER TABLE `material_arrival_line` DISABLE KEYS */;
-INSERT INTO `material_arrival_line` VALUES (1,1,1,1,'LOT-A','三重','2026-10-01',5,15000.00,75000.00,75000.00,0.00,1,1,1,NULL,'2026-07-27 04:43:54','2026-07-27 04:43:54'),(2,2,1,2,'LOT-B','三重','2026-10-15',3,15000.00,45000.00,30000.00,15000.00,1,1,0,NULL,'2026-07-27 10:28:31','2026-07-27 10:28:31');
+INSERT INTO `material_arrival_line` VALUES (1,1,1,1,'LOT-A','三重','2026-10-01',5,15000.00,75000.00,75000.00,0.00,1,1,1,NULL,'2026-07-27 04:43:54','2026-07-27 04:43:54'),(2,2,1,2,'LOT-B','三重','2026-10-15',3,15000.00,45000.00,30000.00,15000.00,1,1,0,NULL,'2026-07-27 10:28:31','2026-07-27 10:28:31'),(3,7,1,3,'Test-A','愛知','2027-08-17',5,15000.00,75000.00,75000.00,0.00,1,1,1,NULL,'2026-08-17 02:13:12','2026-08-17 02:13:12'),(4,10,1,2,'Test-A','愛知','2027-08-17',1,15000.00,15000.00,15000.00,0.00,1,1,1,NULL,'2026-08-17 06:11:19','2026-08-17 06:11:19');
 /*!40000 ALTER TABLE `material_arrival_line` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -378,7 +378,7 @@ CREATE TABLE `material_lot` (
   KEY `fk_ml_material` (`material_id`),
   CONSTRAINT `fk_ml_arrival_line` FOREIGN KEY (`arrival_line_id`) REFERENCES `material_arrival_line` (`line_id`),
   CONSTRAINT `fk_ml_material` FOREIGN KEY (`material_id`) REFERENCES `material` (`material_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -387,7 +387,7 @@ CREATE TABLE `material_lot` (
 
 LOCK TABLES `material_lot` WRITE;
 /*!40000 ALTER TABLE `material_lot` DISABLE KEYS */;
-INSERT INTO `material_lot` VALUES (1,1,1,'LOT-A','三重','2026-10-01',60000.00,'2026-07-27 04:43:54','2026-07-27 04:48:19'),(2,1,2,'LOT-B','三重','2026-10-15',30000.00,'2026-07-27 10:28:31','2026-07-27 10:28:31');
+INSERT INTO `material_lot` VALUES (1,1,1,'LOT-A','三重','2026-10-01',60000.00,'2026-07-27 04:43:54','2026-07-27 04:48:19'),(2,1,2,'LOT-B','三重','2026-10-15',30000.00,'2026-07-27 10:28:31','2026-07-27 10:28:31'),(3,1,3,'Test-A','愛知','2027-08-17',75000.00,'2026-08-17 02:13:12','2026-08-17 02:13:12'),(4,1,4,'Test-A','愛知','2027-08-17',15000.00,'2026-08-17 06:11:19','2026-08-17 06:11:19');
 /*!40000 ALTER TABLE `material_lot` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -403,6 +403,7 @@ CREATE TABLE `material_order` (
   `material_id` bigint NOT NULL,
   `supplier_id` varchar(100) NOT NULL COMMENT '仕入先(今回は文字列管理。将来的にsupplierマスタに分離してもよい)',
   `order_qty` decimal(10,2) NOT NULL COMMENT '発注数量(g または ml)',
+  `allowed_origins` varchar(255) DEFAULT NULL COMMENT 'この発注で許可する産地をカンマ区切りで保持(例: "愛知,三重")。\n    recipe_item.allowed_originsと同じ形式。任意項目で、\n    未指定の場合は産地を問わない発注として扱う',
   `order_date` date NOT NULL,
   `expected_date` date DEFAULT NULL COMMENT '納品予定日',
   `status` enum('NOT_ARRIVED','PARTIALLY_ARRIVED','FULLY_ARRIVED') NOT NULL DEFAULT 'NOT_ARRIVED' COMMENT '未入荷/一部入荷/入荷完了。入荷明細の合格数量を集計して判定する',
@@ -420,7 +421,7 @@ CREATE TABLE `material_order` (
 
 LOCK TABLES `material_order` WRITE;
 /*!40000 ALTER TABLE `material_order` DISABLE KEYS */;
-INSERT INTO `material_order` VALUES (1,1,'仕入先A',45000.00,'2026-07-27',NULL,'FULLY_ARRIVED','2026-07-27 04:42:48','2026-07-27 04:43:54'),(2,1,'仕入先A',45000.00,'2026-07-27',NULL,'PARTIALLY_ARRIVED','2026-07-27 10:28:02','2026-07-27 10:28:31'),(3,1,'仕入れ先A',150000.00,'2026-08-16','2026-08-18','NOT_ARRIVED','2026-08-16 08:21:15','2026-08-16 08:21:15');
+INSERT INTO `material_order` VALUES (1,1,'仕入先A',45000.00,NULL,'2026-07-27',NULL,'FULLY_ARRIVED','2026-07-27 04:42:48','2026-07-27 04:43:54'),(2,1,'仕入先A',45000.00,NULL,'2026-07-27',NULL,'FULLY_ARRIVED','2026-07-27 10:28:02','2026-08-17 06:11:19'),(3,1,'仕入れ先A',150000.00,NULL,'2026-08-16','2026-08-18','PARTIALLY_ARRIVED','2026-08-16 08:21:15','2026-08-17 02:13:12');
 /*!40000 ALTER TABLE `material_order` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -437,6 +438,7 @@ CREATE TABLE `material_package_spec` (
   `origin` varchar(100) NOT NULL COMMENT '産地・仕入先区分(例:愛知、新潟)',
   `package_weight` decimal(10,2) NOT NULL COMMENT '1箱/袋あたりの目安数量(g または ml)',
   `package_unit_label` varchar(20) NOT NULL COMMENT '表示用単位名(箱、袋、缶など)',
+  `can_mix` tinyint(1) NOT NULL DEFAULT '0' COMMENT '複数の産地が混在する可能性はあるか。trueの産地同士は、発注時に\n    重量・単位が一致するものが自動でグループ化され、まとめて1つの選択肢として扱われる\n    (例: 愛知・三重が両方trueなら「愛知or三重」という1つのチェックボックスになる)。\n    falseの産地は常に単独で表示される(例: 山梨産限定のレシピがある場合など)',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`spec_id`),
@@ -451,7 +453,7 @@ CREATE TABLE `material_package_spec` (
 
 LOCK TABLES `material_package_spec` WRITE;
 /*!40000 ALTER TABLE `material_package_spec` DISABLE KEYS */;
-INSERT INTO `material_package_spec` VALUES (1,1,'愛知',15000.00,'箱','2026-08-15 03:33:18','2026-08-15 03:46:11'),(2,1,'三重',15000.00,'箱','2026-08-15 03:44:06','2026-08-15 03:46:25'),(3,1,'新潟',20000.00,'袋','2026-08-15 03:46:37','2026-08-15 03:46:37'),(4,8,'愛知',15000.00,'箱','2026-08-15 03:54:36','2026-08-15 03:54:36'),(5,8,'三重',15000.00,'箱','2026-08-15 03:54:43','2026-08-15 03:54:43');
+INSERT INTO `material_package_spec` VALUES (1,1,'愛知',15000.00,'箱',1,'2026-08-15 03:33:18','2026-08-17 06:05:00'),(2,1,'三重',15000.00,'箱',1,'2026-08-15 03:44:06','2026-08-17 06:05:05'),(3,1,'新潟',20000.00,'袋',0,'2026-08-15 03:46:37','2026-08-15 03:46:37'),(4,8,'愛知',15000.00,'箱',0,'2026-08-15 03:54:36','2026-08-15 03:54:36'),(5,8,'三重',15000.00,'箱',0,'2026-08-15 03:54:43','2026-08-15 03:54:43');
 /*!40000 ALTER TABLE `material_package_spec` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -655,4 +657,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-08-17  0:03:10
+-- Dump completed on 2026-08-17 15:41:05

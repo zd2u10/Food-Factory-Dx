@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.HttpStatus;
@@ -28,9 +29,22 @@ public class HoldResolutionController {
         this.holdResolutionService = holdResolutionService;
     }
 
-    /** 対応待ち(ON_HOLD)の保留一覧を取得する。 */
+    /**
+     * 保留一覧を取得する。
+     *   GET /api/holds                  → 対応待ち(ON_HOLD)のみ(既存動作、入荷登録画面のプルダウン用)
+     *   GET /api/holds?all=true         → 全件(ステータス問わず。監査・トレーサビリティ確認用)
+     *   GET /api/holds?orderId=8        → 指定した発注に関わった履歴のみ、全件(発注詳細画面での表示用)
+     */
     @GetMapping
-    public List<HoldResolution> listOpenHolds() {
+    public List<HoldResolution> listHolds(
+            @RequestParam(required = false) Boolean all,
+            @RequestParam(required = false) Long orderId) {
+        if (orderId != null) {
+            return holdResolutionService.listHoldsByOrderId(orderId);
+        }
+        if (Boolean.TRUE.equals(all)) {
+            return holdResolutionService.listAllHolds();
+        }
         return holdResolutionService.listOpenHolds();
     }
 

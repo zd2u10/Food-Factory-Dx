@@ -45,6 +45,16 @@ public class HoldResolutionService {
         return holdResolutionMapper.findByStatus(HoldResolution.Status.ON_HOLD);
     }
 
+    /** ステータス問わず全件取得する。監査・トレーサビリティ確認用。 */
+    public List<HoldResolution> listAllHolds() {
+        return holdResolutionMapper.findAll();
+    }
+
+    /** 指定した発注に関わった保留の履歴を、ステータス問わず全件取得する(発注詳細画面での表示用)。 */
+    public List<HoldResolution> listHoldsByOrderId(Long orderId) {
+        return holdResolutionMapper.findByOrderId(orderId);
+    }
+
     /**
      * 返品として対応する。自社に問題がない仕入先都合の返却であり、在庫は一切増減しない
      * (そもそも合格していない分なので、在庫に反映されたことが無い)。

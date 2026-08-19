@@ -18,7 +18,8 @@ public class MaterialOrder {
 
     private Long orderId;             // 主キー
     private Long materialId;          // 発注対象の材料(material.materialIdを参照)
-    private String supplierId;        // 仕入先(現状は文字列管理。将来supplierマスタに分離してもよい)
+    private Long supplierId;          // 仕入先(supplier.supplierIdを参照。旧supplier_id列(文字列)からの
+                                       // 移行に伴い、DB上はsupplier_ref_id列にマッピングされる)
     private BigDecimal orderQty;      // 発注数量(g または ml)
     private String allowedOrigins;    // この発注で許可する産地をカンマ区切りで保持(例: "愛知,三重")。
                                        // recipe_item.allowedOriginsと同じ形式。任意項目(null許容)。
@@ -34,7 +35,7 @@ public class MaterialOrder {
     public MaterialOrder() {
     }
 
-    public MaterialOrder(Long materialId, String supplierId, BigDecimal orderQty,
+    public MaterialOrder(Long materialId, Long supplierId, BigDecimal orderQty,
                           LocalDate orderDate, LocalDate expectedDate) {
         this.materialId = materialId;
         this.supplierId = supplierId;
@@ -62,11 +63,11 @@ public class MaterialOrder {
         this.materialId = materialId;
     }
 
-    public String getSupplierId() {
+    public Long getSupplierId() {
         return supplierId;
     }
 
-    public void setSupplierId(String supplierId) {
+    public void setSupplierId(Long supplierId) {
         this.supplierId = supplierId;
     }
 

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/mybatis-3/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.foodfactory.dx.mapper.SupplierMapper">
+
+    <resultMap id="supplierResultMap" type="com.foodfactory.dx.domain.Supplier">
+        <id column="supplier_id" property="supplierId"/>
+        <result column="name" property="name"/>
+        <result column="address" property="address"/>
+        <result column="phone_number" property="phoneNumber"/>
+        <result column="is_active" property="active"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.Supplier"
+            useGeneratedKeys="true" keyProperty="supplierId">
+        INSERT INTO supplier (name, address, phone_number, is_active)
+        VALUES (#{name}, #{address}, #{phoneNumber}, #{active})
+    </insert>
+
+    <select id="findById" resultMap="supplierResultMap">
+        SELECT * FROM supplier WHERE supplier_id = #{supplierId}
+    </select>
+
+    <select id="findByFilters" resultMap="supplierResultMap">
+        SELECT * FROM supplier
+        <where>
+            <if test="active != null">
+                AND is_active = #{active}
+            </if>
+        </where>
+        ORDER BY supplier_id
+    </select>
+
+    <update id="update" parameterType="com.foodfactory.dx.domain.Supplier">
+        UPDATE supplier
+        SET name         = #{name},
+            address      = #{address},
+            phone_number = #{phoneNumber}
+        WHERE supplier_id = #{supplierId}
+    </update>
+
+    <update id="setActive">
+        UPDATE supplier
+        SET is_active = #{active}
+        WHERE supplier_id = #{supplierId}
+    </update>
+
+</mapper>

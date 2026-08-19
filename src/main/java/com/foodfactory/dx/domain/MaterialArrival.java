@@ -12,7 +12,8 @@ import java.time.LocalDateTime;
 public class MaterialArrival {
 
     private Long arrivalId;          // 主キー
-    private String supplierId;       // 仕入先
+    private Long supplierId;         // 仕入先(supplier.supplierIdを参照。旧supplier_id列(文字列)からの
+                                      // 移行に伴い、DB上はsupplier_ref_id列にマッピングされる)
     private LocalDate arrivalDate;   // 入荷日(伝票の日付)
     private LocalDateTime createdAt; // 登録日時(DB側で自動設定)
     private LocalDateTime updatedAt; // 更新日時(DB側で自動設定)
@@ -20,7 +21,7 @@ public class MaterialArrival {
     public MaterialArrival() {
     }
 
-    public MaterialArrival(String supplierId, LocalDate arrivalDate) {
+    public MaterialArrival(Long supplierId, LocalDate arrivalDate) {
         this.supplierId = supplierId;
         this.arrivalDate = arrivalDate;
     }
@@ -33,11 +34,11 @@ public class MaterialArrival {
         this.arrivalId = arrivalId;
     }
 
-    public String getSupplierId() {
+    public Long getSupplierId() {
         return supplierId;
     }
 
-    public void setSupplierId(String supplierId) {
+    public void setSupplierId(Long supplierId) {
         this.supplierId = supplierId;
     }
 
