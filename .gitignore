@@ -9,7 +9,7 @@ bin/
 
 # VSCode
 .vscode/
-
+0
 # OS
 .DS_Store
 Thumbs.db
@@ -20,3 +20,5 @@ Thumbs.db
 
 # 環境固有の設定(パスワード等を含む可能性があるため、テンプレート化して管理する場合はここに追加)
 # application-local.properties
+
+food_factory_dx.sql

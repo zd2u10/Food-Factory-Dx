@@ -170,7 +170,12 @@ public class ProcurementService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "指定された発注が見つかりません: orderId=" + orderId));
 
-        BigDecimal totalAccepted = materialArrivalLineMapper.sumAcceptedQtyByOrderId(orderId);
+        // 発注の充足数量 = 通常の合格分 + 「結局受け入れ」経由の合格分。
+        // 「結局受け入れ」で新規に生成されたロットは、元の明細のaccepted_qtyには反映しない設計
+        // (トレーサビリティのため、ロットを分けて記録する。8.17節を参照)ため、
+        // sumAcceptedQtyByOrderIdだけでは反映されず、別途合算する必要がある。
+        BigDecimal totalAccepted = materialArrivalLineMapper.sumAcceptedQtyByOrderId(orderId)
+                .add(materialLotMapper.sumAcceptedLateQtyByOrderId(orderId));
 
         MaterialOrder.Status newStatus;
         if (totalAccepted.compareTo(BigDecimal.ZERO) <= 0) {

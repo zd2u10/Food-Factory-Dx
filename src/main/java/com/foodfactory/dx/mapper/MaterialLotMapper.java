@@ -31,11 +31,20 @@ public interface MaterialLotMapper {
 
     /**
      * 特定の入荷明細(arrivalLineId)から生成されたロットを取得する。
-     * 1明細につきロットは1件までという制約(UNIQUE制約)があるため、Optionalで返す。
-     * 「結局受け入れる(ACCEPTED_LATE)」対応で、既存ロットに残量を追加すべきか、
-     * 新規にロットを作るべきかを判定するために使う。
+     * 【修正履歴】以前は1明細につきロットは1件まで(UNIQUE制約)という前提だったが、
+     * 「結局受け入れる(ACCEPTED_LATE)」対応により、同じ明細から後になって
+     * 追加のロットが生成されるケースが生まれたため、この前提は崩れている。
+     * 現在この用途では使用しておらず、他の目的で使う場合は複数件返りうる点に注意すること。
      */
     Optional<MaterialLot> findByArrivalLineId(@Param("arrivalLineId") Long arrivalLineId);
+
+    /**
+     * 指定した発注(orderId)について、「結局受け入れ」(ACCEPTED_LATE)経由で
+     * 生成されたロットの、受け入れた時点の量の合計を返す。
+     * 発注の充足率計算で、通常の合格分(material_arrival_line.accepted_qty)に
+     * 加算するために使う(要件定義書8.17節を参照)。
+     */
+    BigDecimal sumAcceptedLateQtyByOrderId(@Param("orderId") Long orderId);
 
     /**
      * ロットの残量を「指定した量だけ増やす」。decrementRemainingQtyの逆方向の操作。

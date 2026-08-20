@@ -14,6 +14,11 @@ public class MaterialLot {
     private Long lotId;               // 主キー。材料版の「ロットID」に相当
     private Long materialId;          // どの材料のロットか
     private Long arrivalLineId;       // 生成元となった入荷明細(トレーサビリティの核となる紐付け)
+    private Long originHoldId;        // このロットが「結局受け入れ」(ACCEPTED_LATE)によって生成された場合、
+                                       // 元になったhold_resolution.hold_idを記録する。
+                                       // 通常の入荷で作られたロットはnullのまま。
+                                       // 「普通に合格した分」と「一度保留を経て受け入れた分」を
+                                       // ロット単位で区別するための項目
     private String supplierLotNo;     // 仕入先発行のロット番号(arrival_lineからコピー。ここで新規採番はしない)
     private String origin;            // 産地
     private LocalDate expiryDate;      // 賞味期限(FEFO判定の基準)
@@ -56,6 +61,14 @@ public class MaterialLot {
 
     public void setArrivalLineId(Long arrivalLineId) {
         this.arrivalLineId = arrivalLineId;
+    }
+
+    public Long getOriginHoldId() {
+        return originHoldId;
+    }
+
+    public void setOriginHoldId(Long originHoldId) {
+        this.originHoldId = originHoldId;
     }
 
     public String getSupplierLotNo() {

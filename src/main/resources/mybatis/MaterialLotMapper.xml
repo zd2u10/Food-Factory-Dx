@@ -9,6 +9,7 @@
         <id column="lot_id" property="lotId"/>
         <result column="material_id" property="materialId"/>
         <result column="arrival_line_id" property="arrivalLineId"/>
+        <result column="origin_hold_id" property="originHoldId"/>
         <result column="supplier_lot_no" property="supplierLotNo"/>
         <result column="origin" property="origin"/>
         <result column="expiry_date" property="expiryDate"/>
@@ -19,8 +20,8 @@
 
     <insert id="insert" parameterType="com.foodfactory.dx.domain.MaterialLot"
             useGeneratedKeys="true" keyProperty="lotId">
-        INSERT INTO material_lot (material_id, arrival_line_id, supplier_lot_no, origin, expiry_date, remaining_qty)
-        VALUES (#{materialId}, #{arrivalLineId}, #{supplierLotNo}, #{origin}, #{expiryDate}, #{remainingQty})
+        INSERT INTO material_lot (material_id, arrival_line_id, origin_hold_id, supplier_lot_no, origin, expiry_date, remaining_qty)
+        VALUES (#{materialId}, #{arrivalLineId}, #{originHoldId}, #{supplierLotNo}, #{origin}, #{expiryDate}, #{remainingQty})
     </insert>
 
     <select id="findById" resultMap="lotResultMap">
@@ -48,6 +49,25 @@
 
     <select id="findByArrivalLineId" resultMap="lotResultMap">
         SELECT * FROM material_lot WHERE arrival_line_id = #{arrivalLineId}
+    </select>
+
+    <!--
+      発注の充足率計算のうち、「結局受け入れ」(ACCEPTED_LATE)経由で生成された分を合算するためのクエリ。
+      material_lot(origin_hold_id経由) → hold_resolution(line_id経由) → material_arrival_line(order_id)
+      という3段階のJOINで、指定した発注に関わる「結局受け入れロット」の残量合計を求める。
+
+      【重要】ここでは remaining_qty ではなく「受け入れた時点の量」を使うべきだが、
+      material_lotにはその値を別途保持していないため、hold_resolution.held_qty_snapshot
+      (保留になった時点で確定した、変動しない量)をJOIN先から取得して使う。
+      remaining_qtyは製造で消費されると変動するため、充足率の計算には使わない
+      (要件定義書8.17節を参照)。
+    -->
+    <select id="sumAcceptedLateQtyByOrderId" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(hr.held_qty_snapshot), 0)
+        FROM material_lot ml
+                 JOIN hold_resolution hr ON ml.origin_hold_id = hr.hold_id
+                 JOIN material_arrival_line mal ON hr.line_id = mal.line_id
+        WHERE mal.order_id = #{orderId}
     </select>
 
     <update id="incrementRemainingQty">

@@ -49,3 +49,14 @@ CREATE TABLE stock_adjustment (
   CONSTRAINT fk_sa_lot
     FOREIGN KEY (lot_id) REFERENCES material_lot (lot_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -----------------------------------------------------
+-- material_lot に origin_hold_id を追加する(ここでhold_resolutionが作成済みのため参照可能になる)。
+-- このロットが「結局受け入れ」(ACCEPTED_LATE)によって生成された場合、
+-- 元になったhold_resolution.hold_idを記録する。通常の入荷で作られたロットはNULLのまま。
+-- 「普通に合格した分」と「一度保留を経て受け入れた分」を、ロット単位で区別できるようにする。
+-- -----------------------------------------------------
+ALTER TABLE material_lot
+  ADD COLUMN origin_hold_id BIGINT NULL AFTER arrival_line_id,
+  ADD CONSTRAINT fk_ml_origin_hold
+    FOREIGN KEY (origin_hold_id) REFERENCES hold_resolution (hold_id);

@@ -74,6 +74,21 @@ public class HoldResolutionService {
      * (在庫が理由なく増減した記録が残らない、という事態を避けるため)。
      */
     @Transactional
+    /**
+     * 保留を「結局受け入れる」として対応する。
+     *
+     * 【設計変更】以前は、元の明細(material_arrival_line)のheld_qtyをaccepted_qtyに
+     * 繰り入れ、既存ロットに残量を加算する(または無ければ新規作成する)方式だった。
+     * この方式では、「普通に合格した分」と「一度保留を経て受け入れた分」が
+     * 同じロットに混ざってしまい、現場が実物にシールで印を付けて区別している実態と
+     * システムのデータが一致しなくなる、というトレーサビリティ上の問題があった。
+     *
+     * 新しい設計では、元の明細のaccepted_qty/held_qtyは一切書き換えず
+     * (「保留が発生した」という記録として、そのまま残す)、代わりに
+     * 常に新しいロットを1件作成し、そのロットにorigin_hold_idとして
+     * この保留のIDを記録する。これにより、ロット単位で「結局受け入れ」経由かどうかを
+     * 追跡できるようになる(要件定義書8.17節を参照)。
+     */
     public void resolveAsAcceptedLate(Long holdId, String comment) {
         HoldResolution hold = getHoldOrThrow(holdId);
         BigDecimal qty = hold.getHeldQtySnapshot();
@@ -82,36 +97,22 @@ public class HoldResolutionService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "元の入荷明細が見つかりません: lineId=" + hold.getLineId()));
 
-        // 元の明細のacceptedQty/heldQtyを更新する(保留分を合格分へ繰り入れる)。
-        // 検品チェック項目(破損・期限切れ・異物混入)は変わらないため、そのまま引き継いで渡す。
-        line.setAcceptedQty(line.getAcceptedQty().add(qty));
-        line.setHeldQty(BigDecimal.ZERO);
-        materialArrivalLineMapper.updateInspectionResult(line);
-
-        // 対応する材料ロットが既にあるか確認する(1明細につきロットは1件までの制約があるため)。
-        MaterialLot existingLot = materialLotMapper.findByArrivalLineId(line.getLineId()).orElse(null);
+        // 元の明細(accepted_qty/held_qty)は書き換えない。保留が発生したという記録を
+        // そのまま残すため。産地・賞味期限は、この明細からそのまま引き継ぐ。
+        MaterialLot newLot = new MaterialLot(
+                line.getMaterialId(), line.getLineId(), line.getSupplierLotNo(),
+                line.getOrigin(), line.getExpiryDate(), qty);
+        newLot.setOriginHoldId(holdId);
+        materialLotMapper.insert(newLot);
 
         LocalDate adjustmentDate = LocalDate.now();
-        String adjustmentComment = "hold_id=" + holdId + " の保留対応(ACCEPTED_LATE)による在庫増加";
+        String adjustmentComment = "hold_id=" + holdId + " の保留対応(ACCEPTED_LATE)による在庫増加(新規ロット)";
+        stockAdjustmentMapper.insert(
+                new StockAdjustment(newLot.getLotId(), BigDecimal.ZERO, qty, adjustmentDate, adjustmentComment));
 
-        if (existingLot != null) {
-            // 既存ロットがある場合(同じ明細内で一部合格・一部保留だったケース) → 残量を増やす
-            BigDecimal beforeQty = existingLot.getRemainingQty();
-            BigDecimal afterQty = beforeQty.add(qty);
-            stockAdjustmentMapper.insert(
-                    new StockAdjustment(existingLot.getLotId(), beforeQty, afterQty, adjustmentDate, adjustmentComment));
-            materialLotMapper.incrementRemainingQty(existingLot.getLotId(), qty);
-        } else {
-            // 既存ロットが無い場合(全量保留で、合格分ゼロだったケース) → 新規にロットを作成する
-            MaterialLot newLot = new MaterialLot(
-                    line.getMaterialId(), line.getLineId(), line.getSupplierLotNo(),
-                    line.getOrigin(), line.getExpiryDate(), qty);
-            materialLotMapper.insert(newLot);
-            stockAdjustmentMapper.insert(
-                    new StockAdjustment(newLot.getLotId(), BigDecimal.ZERO, qty, adjustmentDate, adjustmentComment));
-        }
-
-        // この明細が発注に紐づく場合、合格数量が増えたことで発注の充足状況も変わるため再集計する。
+        // この明細が発注に紐づく場合、充足状況が変わるため再集計する。
+        // 充足率計算自体は、新しく作られたロット(origin_hold_id経由)を
+        // MaterialOrderService側で合算する形に変更済み(sumAcceptedLateQtyByOrderId)。
         if (line.getOrderId() != null) {
             procurementService.recalculateOrderStatus(line.getOrderId());
         }

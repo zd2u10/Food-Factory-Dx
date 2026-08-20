@@ -8,6 +8,25 @@
 USE food_factory_dx;
 
 -- -----------------------------------------------------
+-- 仕入先マスタ
+-- 当初material_order/material_arrivalのsupplierIdは自由入力の文字列で管理していたが、
+-- 「仕入先A」「仕入れ先A」のような表記ゆれが実データで発生し、トレーサビリティを
+-- 損なう実害が出たため、正式にマスタ化した(8.14節を参照)。
+-- 論理削除(is_active)を持たせる: 倒産・取引停止等でも過去の発注・入荷記録は
+-- そのまま追跡できるよう、物理削除ではなく論理削除にしている。
+-- -----------------------------------------------------
+CREATE TABLE supplier (
+  supplier_id   BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name          VARCHAR(100) NOT NULL,
+  address       VARCHAR(255) NULL,
+  phone_number  VARCHAR(20) NULL,
+  is_active     BOOLEAN NOT NULL DEFAULT TRUE
+    COMMENT '有効/廃版フラグ。倒産・取引停止等でも過去の記録は残すため、物理削除はせず論理削除にする',
+  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -----------------------------------------------------
 -- 発注記録(発注ヘッダー)
 -- 1件の発注が、複数回に分けて納品される(分納)ことがあるため、
 -- 発注そのものと、実際の入荷は別テーブルに分離している。
@@ -15,7 +34,7 @@ USE food_factory_dx;
 CREATE TABLE material_order (
   order_id       BIGINT AUTO_INCREMENT PRIMARY KEY,
   material_id    BIGINT NOT NULL,
-  supplier_id    VARCHAR(100) NOT NULL COMMENT '仕入先(今回は文字列管理。将来的にsupplierマスタに分離してもよい)',
+  supplier_ref_id BIGINT NOT NULL COMMENT '仕入先(supplier.supplier_idを参照)',
   order_qty      DECIMAL(10, 2) NOT NULL COMMENT '発注数量(g または ml)',
   allowed_origins VARCHAR(255) NULL
     COMMENT 'この発注で許可する産地をカンマ区切りで保持(例: "愛知,三重")。
@@ -29,7 +48,9 @@ CREATE TABLE material_order (
   created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_mo_material
-    FOREIGN KEY (material_id) REFERENCES material (material_id)
+    FOREIGN KEY (material_id) REFERENCES material (material_id),
+  CONSTRAINT fk_mo_supplier
+    FOREIGN KEY (supplier_ref_id) REFERENCES supplier (supplier_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- -----------------------------------------------------
@@ -40,10 +61,12 @@ CREATE TABLE material_order (
 -- -----------------------------------------------------
 CREATE TABLE material_arrival (
   arrival_id     BIGINT AUTO_INCREMENT PRIMARY KEY,
-  supplier_id    VARCHAR(100) NOT NULL,
+  supplier_ref_id BIGINT NOT NULL COMMENT '仕入先(supplier.supplier_idを参照)',
   arrival_date   DATE NOT NULL,
   created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_ma_supplier
+    FOREIGN KEY (supplier_ref_id) REFERENCES supplier (supplier_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- -----------------------------------------------------
@@ -92,7 +115,7 @@ CREATE TABLE material_arrival_line (
 CREATE TABLE material_lot (
   lot_id           BIGINT AUTO_INCREMENT PRIMARY KEY,
   material_id      BIGINT NOT NULL,
-  arrival_line_id  BIGINT NOT NULL COMMENT '生成元となった入荷明細',
+  arrival_line_id  BIGINT NOT NULL COMMENT '生成元となった入荷明細(産地・賞味期限等のトレース元)',
   supplier_lot_no  VARCHAR(100) NOT NULL COMMENT '仕入先が発行したロット番号(arrival_lineからコピー、表示の利便性のため)',
   origin           VARCHAR(100) NOT NULL,
   expiry_date      DATE NOT NULL,
@@ -102,6 +125,9 @@ CREATE TABLE material_lot (
   CONSTRAINT fk_ml_material
     FOREIGN KEY (material_id) REFERENCES material (material_id),
   CONSTRAINT fk_ml_arrival_line
-    FOREIGN KEY (arrival_line_id) REFERENCES material_arrival_line (line_id),
-  CONSTRAINT uq_ml_arrival_line UNIQUE (arrival_line_id)
+    FOREIGN KEY (arrival_line_id) REFERENCES material_arrival_line (line_id)
+  -- 【重要】origin_hold_id列(結局受け入れ対応のロット分離用)は、ここでは定義しない。
+  -- hold_resolutionテーブルがphase3で作られるため、参照先が存在しない状態になってしまう。
+  -- そのため、phase3_hold_adjustment_schema.sqlの末尾で、hold_resolution作成後に
+  -- ALTER TABLEで追加する(実行順序: phase0→1→2→3の順を守ること)。
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
