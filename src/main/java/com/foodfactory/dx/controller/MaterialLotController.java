@@ -30,7 +30,11 @@ public class MaterialLotController {
 
     /** 指定した材料のロットを、賞味期限が近い順(FEFO順)に取得する。 */
     @GetMapping
-    public List<MaterialLot> listByMaterial(@RequestParam Long materialId) {
-        return materialLotMapper.findByMaterialIdOrderByExpiry(materialId);
+    public List<MaterialLot> listByMaterial(@RequestParam(required = false) Long materialId) {
+        if (materialId != null) {
+            return materialLotMapper.findByMaterialIdOrderByExpiry(materialId);
+        }
+        // materialId未指定の場合は、在庫画面向けに残量が残っている全ロットを返す。
+        return materialLotMapper.findAllWithRemainingQty();
     }
 }

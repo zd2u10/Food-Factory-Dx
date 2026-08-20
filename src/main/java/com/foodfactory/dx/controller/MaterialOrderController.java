@@ -2,6 +2,7 @@ package com.foodfactory.dx.controller;
 
 import com.foodfactory.dx.domain.MaterialArrivalLine;
 import com.foodfactory.dx.domain.MaterialOrder;
+import com.foodfactory.dx.dto.MaterialOrderSummary;
 import com.foodfactory.dx.service.MaterialOrderService;
 import com.foodfactory.dx.service.ProcurementService;
 import java.util.List;
@@ -27,8 +28,9 @@ public class MaterialOrderController {
         this.procurementService = procurementService;
     }
 
+    /** 発注一覧を、充足数量(結局受け入れ分を含む)・保留履歴の有無を含めて取得する。 */
     @GetMapping
-    public List<MaterialOrder> list() {
+    public List<MaterialOrderSummary> list() {
         return materialOrderService.listOrders();
     }
 

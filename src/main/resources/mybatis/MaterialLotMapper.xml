@@ -41,6 +41,14 @@
         ORDER BY expiry_date ASC
     </select>
 
+    <!-- 在庫画面向け: 全材料について、残量が残っているロットを一括取得する。 -->
+    <select id="findAllWithRemainingQty" resultMap="lotResultMap">
+        SELECT *
+        FROM material_lot
+        WHERE remaining_qty > 0
+        ORDER BY material_id ASC, expiry_date ASC
+    </select>
+
     <update id="setRemainingQty">
         UPDATE material_lot
         SET remaining_qty = #{remainingQty}

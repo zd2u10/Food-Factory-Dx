@@ -22,6 +22,12 @@ public interface MaterialLotMapper {
     List<MaterialLot> findByMaterialIdOrderByExpiry(@Param("materialId") Long materialId);
 
     /**
+     * 在庫画面向けに、残量が残っている(remaining_qty > 0)全ロットを、
+     * 材料IDの昇順・賞味期限が近い順で取得する。
+     */
+    List<MaterialLot> findAllWithRemainingQty();
+
+    /**
      * ロットの残量を、計算(増減)ではなく指定した値に直接上書きする。
      * StockAdjustmentService(棚卸し等による手動補正)専用のメソッドであり、
      * 通常の製造消費・入荷登録の経路からは呼ばない
