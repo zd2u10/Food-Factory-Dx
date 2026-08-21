@@ -104,3 +104,11 @@ CREATE TABLE shipment_line (
   CONSTRAINT fk_sl_batch
     FOREIGN KEY (batch_id) REFERENCES manufacturing_batch (batch_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -----------------------------------------------------
+-- batch_order_allocation に order_id の外部キー制約を追加する
+-- (ここでcustomer_orderが作成済みのため参照可能になる)。
+-- -----------------------------------------------------
+ALTER TABLE batch_order_allocation
+  ADD CONSTRAINT fk_boa_order
+  FOREIGN KEY (order_id) REFERENCES customer_order (order_id);

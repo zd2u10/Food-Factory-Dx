@@ -22,6 +22,15 @@
         VALUES (#{orderId}, #{itemId}, #{qty}, #{unitPrice}, #{amount})
     </insert>
 
+    <update id="update" parameterType="com.foodfactory.dx.domain.OrderLine">
+        UPDATE order_line
+        SET item_id    = #{itemId},
+            qty        = #{qty},
+            unit_price = #{unitPrice},
+            amount     = #{amount}
+        WHERE line_id = #{lineId}
+    </update>
+
     <select id="findById" resultMap="orderLineResultMap">
         SELECT * FROM order_line WHERE line_id = #{lineId}
     </select>
@@ -42,6 +51,16 @@
                  JOIN customer_order co ON ol.order_id = co.order_id
         WHERE ol.item_id = #{itemId}
           AND co.status != 'CANCELLED'
+    </select>
+
+    <!-- 按分の優先順位: 受注日が古い(先に受けた注文)順。同じ受注日ならline_idの昇順(登録順)。 -->
+    <select id="findActiveLinesByItemIdOrderByOrderDate" resultMap="orderLineResultMap">
+        SELECT ol.*
+        FROM order_line ol
+                 JOIN customer_order co ON ol.order_id = co.order_id
+        WHERE ol.item_id = #{itemId}
+          AND co.status != 'CANCELLED'
+        ORDER BY co.order_date ASC, ol.line_id ASC
     </select>
 
 </mapper>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.foodfactory.dx.mapper.BatchOrderAllocationMapper">
+
+    <resultMap id="allocationResultMap" type="com.foodfactory.dx.domain.BatchOrderAllocation">
+        <id column="allocation_id" property="allocationId"/>
+        <result column="batch_id" property="batchId"/>
+        <result column="order_id" property="orderId"/>
+        <result column="allocated_qty" property="allocatedQty"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.BatchOrderAllocation"
+            useGeneratedKeys="true" keyProperty="allocationId">
+        INSERT INTO batch_order_allocation (batch_id, order_id, allocated_qty)
+        VALUES (#{batchId}, #{orderId}, #{allocatedQty})
+    </insert>
+
+    <select id="findByOrderId" resultMap="allocationResultMap">
+        SELECT * FROM batch_order_allocation WHERE order_id = #{orderId}
+    </select>
+
+    <select id="findByBatchId" resultMap="allocationResultMap">
+        SELECT * FROM batch_order_allocation WHERE batch_id = #{batchId}
+    </select>
+
+    <!--
+      「まだ有効な受注」に紐づく按分だけを合計する。
+      customer_orderのstatusがCANCELLED以外のものだけを対象にすることで、
+      キャンセルされた受注の按分は、自動的に合計から除外される
+      (按分レコード自体は残したまま、集計時に生死を判定する設計)。
+    -->
+    <select id="sumActiveAllocatedQtyByBatchId" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(boa.allocated_qty), 0)
+        FROM batch_order_allocation boa
+                 JOIN customer_order co ON boa.order_id = co.order_id
+        WHERE boa.batch_id = #{batchId}
+          AND co.status != 'CANCELLED'
+    </select>
+
+</mapper>

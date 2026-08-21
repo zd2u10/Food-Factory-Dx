@@ -3,6 +3,8 @@ package com.foodfactory.dx.service;
 import com.foodfactory.dx.domain.Item;
 import com.foodfactory.dx.domain.ManufacturingBatch;
 import com.foodfactory.dx.domain.MrpRun;
+import com.foodfactory.dx.domain.OrderLine;
+import com.foodfactory.dx.mapper.BatchOrderAllocationMapper;
 import com.foodfactory.dx.mapper.ItemMapper;
 import com.foodfactory.dx.mapper.ManufacturingBatchMapper;
 import com.foodfactory.dx.mapper.MrpRunMapper;
@@ -41,19 +43,22 @@ public class MrpService {
     private final ManufacturingBatchMapper manufacturingBatchMapper;
     private final MrpRunMapper mrpRunMapper;
     private final ManufacturingService manufacturingService;
+    private final BatchOrderAllocationMapper batchOrderAllocationMapper;
 
     public MrpService(ItemMapper itemMapper,
                        OrderLineMapper orderLineMapper,
                        ShipmentLineMapper shipmentLineMapper,
                        ManufacturingBatchMapper manufacturingBatchMapper,
                        MrpRunMapper mrpRunMapper,
-                       ManufacturingService manufacturingService) {
+                       ManufacturingService manufacturingService,
+                       BatchOrderAllocationMapper batchOrderAllocationMapper) {
         this.itemMapper = itemMapper;
         this.orderLineMapper = orderLineMapper;
         this.shipmentLineMapper = shipmentLineMapper;
         this.manufacturingBatchMapper = manufacturingBatchMapper;
         this.mrpRunMapper = mrpRunMapper;
         this.manufacturingService = manufacturingService;
+        this.batchOrderAllocationMapper = batchOrderAllocationMapper;
     }
 
     /**
@@ -119,9 +124,61 @@ public class MrpService {
 
         LocalDate today = LocalDate.now();
         for (int i = 0; i < batchCount; i++) {
-            created.add(manufacturingService.createAutoBatch(itemId, today, runId));
+            ManufacturingBatch batch = manufacturingService.createAutoBatch(itemId, today, runId);
+            created.add(batch);
         }
 
+        allocateOrdersToBatches(itemId, created);
+
         return created;
+    }
+
+    /**
+     * 生成されたバッチ群に、まだ出荷されていない受注(古い順)を、先頭のバッチから順に
+     * 按分して記録する。1個でも受注由来の数量を含むバッチには、その受注の按分を作る。
+     * 按分しきれなかった残り(バッチ容量 - 受注按分合計)は、安全在庫由来として、
+     * レコードを作らずそのままにする(暗黙的な表現)。
+     *
+     * 【注意】この按分は「受注をどのバッチに割り当てたか」の記録用であり、
+     * 実際にどのバッチからどの受注へ出荷するか(FEFO)を決めるものではない。
+     * 出荷時のバッチ選定は、従来通りShipmentService側のFEFOロジックが行う。
+     */
+    private void allocateOrdersToBatches(Long itemId, List<ManufacturingBatch> createdBatches) {
+        if (createdBatches.isEmpty()) {
+            return;
+        }
+
+        // まだ出荷されていない、有効な受注明細を、受注日が古い順(先に受けた注文を優先)に取得する。
+        List<OrderLine> activeLines = orderLineMapper.findActiveLinesByItemIdOrderByOrderDate(itemId);
+
+        int batchIndex = 0;
+        BigDecimal remainingInCurrentBatch = createdBatches.get(0).getPlannedQty();
+
+        for (OrderLine line : activeLines) {
+            BigDecimal shipped = shipmentLineMapper.sumShippedQtyByOrderLineId(line.getLineId());
+            BigDecimal remainingInLine = line.getQty().subtract(shipped).max(BigDecimal.ZERO);
+            if (remainingInLine.compareTo(BigDecimal.ZERO) <= 0) {
+                continue; // 既に出荷済みで残量が無い明細は、按分の対象外
+            }
+
+            while (remainingInLine.compareTo(BigDecimal.ZERO) > 0 && batchIndex < createdBatches.size()) {
+                BigDecimal allocateQty = remainingInLine.min(remainingInCurrentBatch);
+                if (allocateQty.compareTo(BigDecimal.ZERO) > 0) {
+                    batchOrderAllocationMapper.insert(new com.foodfactory.dx.domain.BatchOrderAllocation(
+                            createdBatches.get(batchIndex).getBatchId(), line.getOrderId(), allocateQty));
+                    remainingInLine = remainingInLine.subtract(allocateQty);
+                    remainingInCurrentBatch = remainingInCurrentBatch.subtract(allocateQty);
+                }
+                if (remainingInCurrentBatch.compareTo(BigDecimal.ZERO) <= 0) {
+                    batchIndex += 1;
+                    if (batchIndex < createdBatches.size()) {
+                        remainingInCurrentBatch = createdBatches.get(batchIndex).getPlannedQty();
+                    }
+                }
+            }
+            if (batchIndex >= createdBatches.size()) {
+                break; // 全バッチを受注で使い切った(残りは安全在庫の必要量分のみ生成されている想定)
+            }
+        }
     }
 }

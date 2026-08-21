@@ -25,6 +25,42 @@ CREATE TABLE IF NOT EXISTS mrp_run (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- -----------------------------------------------------
+-- バッチ別受注按分
+--
+-- MRPが1回の実行で、複数商品・複数バッチをまとめて生成する際、
+-- 「1つのバッチのうち、どの受注に、どれだけの数量が起因しているか」を記録する。
+--
+-- 【設計意図】受注がキャンセルされた際、「そのバッチをキャンセルすべきか」を
+-- 正確に判定するために必要。バッチ全体を「受注由来 or 安全在庫由来」の
+-- どちらか一方に分類するのではなく、1つのバッチの中に両方が混在しうる
+-- (例: 198個のバッチのうち、受注A30個+受注B40個+安全在庫分128個)ため、
+-- 按分を明細として記録する中間テーブルにしている。
+--
+-- 「按分されていない残り」(plannedQty - このバッチのallocated_qty合計)が、
+-- 安全在庫由来の部分を表す(暗黙的に、レコードを作らないことで表現する)。
+--
+-- 受注キャンセル時のルール:
+--   このテーブルの按分レコード自体は、履歴として残す(削除しない)。
+--   ただし、「安全在庫由来の部分が残っている(0より大きい)場合、
+--   そのバッチはキャンセルしない」というルールで、
+--   紐づく全受注がキャンセルされても、安全在庫分が守られるようにする。
+-- -----------------------------------------------------
+CREATE TABLE batch_order_allocation (
+  allocation_id  BIGINT AUTO_INCREMENT PRIMARY KEY,
+  batch_id       BIGINT NOT NULL,
+  order_id       BIGINT NOT NULL,
+  allocated_qty  DECIMAL(10, 2) NOT NULL COMMENT 'このバッチのうち、この受注に按分された数量',
+  created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_boa_batch
+    FOREIGN KEY (batch_id) REFERENCES manufacturing_batch (batch_id)
+  -- 【重要】order_idへの外部キー制約(customer_order参照)は、ここでは付けない。
+  -- customer_orderテーブルはphase5(受注・出荷)で作られるため、
+  -- phase4の時点ではまだ存在しない(material_lot.origin_hold_idと同じパターン)。
+  -- 制約の追加は、phase5_order_shipment_schema.sqlの末尾で行う
+  -- (実行順序: phase0→1→2→3→4→5の順を守ること)。
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -----------------------------------------------------
 -- manufacturing_batch への変更(既存環境向け)
 -- -----------------------------------------------------
 
