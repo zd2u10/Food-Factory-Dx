@@ -28,8 +28,8 @@ public class ManufacturingBatch {
     private Long batchId;              // 主キー。商品版の「ロットID」として使う
     private Long itemId;                // どの商品のバッチか
     private Long mrpRunId;              // どのMRP実行から生成されたか(フェーズ4まではnullのまま)
-    private LocalDate batchDate;        // 製造日
-    private Integer batchSeq;           // その日・その商品の何バッチ目か(1から始まる連番)
+    private LocalDate batchDate;        // 製造日。まだどの日にも配置されていない未配置プールの場合はnull
+    private Integer batchSeq;           // その日・その商品の何バッチ目か(1から始まる連番)。batchDateと同様、未配置の間はnull
 
     // フィールド宣言時点で初期値を持たせている(MaterialOrder.statusと同じ理由)。
     private Status status = Status.DRAFT;             // バッチの進行状態
@@ -45,6 +45,7 @@ public class ManufacturingBatch {
     private String lossComment;         // 軽微な不良の理由コメント
     private String rejectComment;       // REJECTEDになった場合の理由コメント
     private String cancelComment;       // CANCELLEDになった場合の理由コメント(製造開始前の取り消し)
+    private java.math.BigDecimal actualHydrationQty; // 実際に加えた水の実測量(ml)。トレーサビリティ記録用
 
     private LocalDateTime createdAt;    // 登録日時(DB側で自動設定)
     private LocalDateTime updatedAt;    // 更新日時(DB側で自動設定)
@@ -186,6 +187,14 @@ public class ManufacturingBatch {
 
     public void setCancelComment(String cancelComment) {
         this.cancelComment = cancelComment;
+    }
+
+    public java.math.BigDecimal getActualHydrationQty() {
+        return actualHydrationQty;
+    }
+
+    public void setActualHydrationQty(java.math.BigDecimal actualHydrationQty) {
+        this.actualHydrationQty = actualHydrationQty;
     }
 
     public LocalDateTime getCreatedAt() {

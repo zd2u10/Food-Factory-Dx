@@ -5,18 +5,6 @@
 -- 現在のバックエンドコードが期待する最新のスキーマが作られる。
 -- 既存のfood_factory_dxデータベースがある場合は、実行前にDROPされる
 -- (テストデータは全て失われるので注意)。
---
--- 中身は、以下のファイルを実行順に単純結合したもの:
---   phase0_master_schema.sql
---   phase1_procurement_schema.sql (supplierマスタを統合済み)
---   phase2_manufacturing_schema.sql
---   phase3_hold_adjustment_schema.sql (material_lot.origin_hold_id追加を含む)
---   phase4_mrp_schema.sql (batch_order_allocation新設を含む)
---   phase5_order_shipment_schema.sql (customer.required_residual_days、
---     batch_order_allocationへの外部キー追加を含む)
---
--- 個別のmigration_*.sqlファイルは、この統合作業により全て不要になった
--- (使い終えた過去の記録として、削除はせずそのまま残してある)。
 -- =====================================================
 
 DROP DATABASE IF EXISTS food_factory_dx;
@@ -263,8 +251,13 @@ CREATE TABLE manufacturing_batch (
   batch_id        BIGINT AUTO_INCREMENT PRIMARY KEY,
   item_id         BIGINT NOT NULL,
   mrp_run_id      BIGINT NULL COMMENT 'フェーズ4で使用予定。現時点ではmrp_runテーブル未実装のためFK制約なし',
-  batch_date      DATE NOT NULL,
-  batch_seq       INT NOT NULL COMMENT 'その日・その商品の何バッチ目か(1から始まる連番)',
+  batch_date      DATE NULL
+                  COMMENT 'まだどの日にも配置されていないDraft(未配置プール)はNULL。
+                    デイリー画面で特定の日に配置した時点で、その日付がセットされる
+                    (要件定義書8.19節を参照)',
+  batch_seq       INT NULL
+                  COMMENT 'その日・その商品の何バッチ目か(1から始まる連番)。
+                    batch_dateと同様、未配置の間はNULLのままで、配置された時点で採番する',
   status          ENUM('DRAFT', 'PLAN', 'MANUFACTURING', 'COMPLETED', 'REJECTED', 'CANCELLED')
                   NOT NULL DEFAULT 'DRAFT',
   origin_type     ENUM('MRP_AUTO', 'MANUAL') NOT NULL DEFAULT 'MANUAL'
@@ -279,11 +272,21 @@ CREATE TABLE manufacturing_batch (
   loss_comment    VARCHAR(255) NULL,
   reject_comment  VARCHAR(255) NULL COMMENT 'REJECTEDになった場合の理由',
   cancel_comment  VARCHAR(255) NULL COMMENT 'CANCELLEDになった場合の理由(製造開始前の取り消し)',
+  actual_hydration_qty DECIMAL(10, 2) NULL
+                  COMMENT '実際に加えた水の実測量(ml)。トレーサビリティ記録用。
+                    「加水合計」(画面表示)は、この値と液体添加物の実測値合計を
+                    合算したもの(水そのものは材料マスタ・在庫の対象外のため、
+                    専用列として持たせている。要件定義書8.20節を参照)',
   created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_mb_item
     FOREIGN KEY (item_id) REFERENCES items (item_id),
-  CONSTRAINT uq_mb_item_date_seq UNIQUE (item_id, batch_date, batch_seq)
+  -- 【重要】以前はUNIQUE制約だったが、batch_date/batch_seqがNULL許容になったことに伴い撤廃した。
+  -- MySQLのUNIQUE制約はNULL同士を「重複ではない」とみなすため、複数の未配置Draft
+  -- (batch_date=NULL, batch_seq=NULL)が同じitem_idで共存することは制約上問題ないが、
+  -- 「配置済みのもの同士(NULLでない値)が重複しないこと」は、アプリケーション側
+  -- (Service層でfindMaxBatchSeqを使って採番する際の排他制御)で保証する。
+  KEY idx_mb_item_date_seq (item_id, batch_date, batch_seq)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- -----------------------------------------------------

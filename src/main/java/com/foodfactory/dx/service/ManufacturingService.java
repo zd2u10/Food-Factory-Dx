@@ -96,8 +96,15 @@ public class ManufacturingService {
         Item item = itemMapper.findById(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("指定された商品が見つかりません: itemId=" + itemId));
 
-        Integer maxSeq = manufacturingBatchMapper.findMaxBatchSeq(itemId, batchDate);
-        int nextSeq = (maxSeq == null) ? 1 : maxSeq + 1;
+        // batchDateがnull(=まだどの日にも配置されていない、未配置プールのDraft)の場合、
+        // 「その日の何バッチ目か」という概念自体がまだ存在しないため、batchSeqも採番せずnullのままにする。
+        // 後日、デイリー画面で特定の日に配置された時点で、batchDateとbatchSeqが初めて確定する
+        // (ManufacturingBatchService.assignToDateのようなメソッドで採番する想定)。
+        Integer nextSeq = null;
+        if (batchDate != null) {
+            Integer maxSeq = manufacturingBatchMapper.findMaxBatchSeq(itemId, batchDate);
+            nextSeq = (maxSeq == null) ? 1 : maxSeq + 1;
+        }
 
         ManufacturingBatch batch = new ManufacturingBatch();
         batch.setItemId(itemId);
@@ -111,6 +118,45 @@ public class ManufacturingService {
 
         manufacturingBatchMapper.insert(batch);
         return batch;
+    }
+
+    /**
+     * 未配置プールのDraftを、特定の日付に配置する(デイリー画面で、
+     * バッジをタップ/ドラッグして「〇月〇日の予定」に移す操作に対応)。
+     * その日・その商品の何バッチ目かを、この時点で初めて採番する。
+     */
+    @Transactional
+    public void assignToDate(Long batchId, LocalDate batchDate) {
+        ManufacturingBatch batch = getBatchOrThrow(batchId);
+        if (batch.getStatus() != ManufacturingBatch.Status.DRAFT) {
+            throw new IllegalStateException(
+                    "DRAFT状態のバッチのみ配置できます。現在の状態: " + batch.getStatus());
+        }
+        if (batch.getBatchDate() != null) {
+            throw new IllegalStateException("このバッチは既に配置済みです(batchDate=" + batch.getBatchDate() + ")");
+        }
+
+        Integer maxSeq = manufacturingBatchMapper.findMaxBatchSeq(batch.getItemId(), batchDate);
+        int nextSeq = (maxSeq == null) ? 1 : maxSeq + 1;
+
+        int updated = manufacturingBatchMapper.assignToDate(batchId, batchDate, nextSeq);
+        if (updated == 0) {
+            throw new IllegalStateException("配置に失敗しました(既に他の操作で配置済みの可能性があります)。batchId=" + batchId);
+        }
+    }
+
+    /**
+     * 特定の日付に配置したDraftを、未配置プールに戻す(誤って配置した場合の取り消し)。
+     * PLAN確定済みのものは対象外(その場合はcancelBatchで取り消す)。
+     */
+    @Transactional
+    public void unassignFromDate(Long batchId) {
+        ManufacturingBatch batch = getBatchOrThrow(batchId);
+        if (batch.getStatus() != ManufacturingBatch.Status.DRAFT) {
+            throw new IllegalStateException(
+                    "DRAFT状態のバッチのみ、未配置に戻せます。現在の状態: " + batch.getStatus());
+        }
+        manufacturingBatchMapper.unassignFromDate(batchId);
     }
 
     /** DRAFT → PLAN への遷移。人が内容を確認し、確定させる操作に対応する。 */
@@ -221,7 +267,7 @@ public class ManufacturingService {
 
     /** 製造を実行する(PLAN → MANUFACTURING)。 */
     @Transactional
-    public void executeBatch(Long batchId, List<ActualUsageInput> actualUsages) {
+    public void executeBatch(Long batchId, List<ActualUsageInput> actualUsages, BigDecimal actualHydrationQty) {
         ManufacturingBatch batch = getBatchOrThrow(batchId);
         if (batch.getStatus() != ManufacturingBatch.Status.PLAN) {
             throw new IllegalStateException(
@@ -259,6 +305,12 @@ public class ManufacturingService {
                     BatchMaterialUsage.UsageType.CONSUMPTION, null);
             batchMaterialUsageMapper.insert(usage);
         }
+
+        // 水はそもそも材料マスタ・在庫の対象外(在庫を消費するものではない)ため、
+        // batch_material_usageではなく、manufacturing_batchの専用列に直接記録する
+        // (トレーサビリティ記録用。「加水合計」画面表示は、この値と液体添加物の
+        // 実測値合計を、フロント側で合算して求める)。
+        manufacturingBatchMapper.updateActualHydrationQty(batchId, actualHydrationQty);
 
         manufacturingBatchMapper.updateStatus(batchId, ManufacturingBatch.Status.MANUFACTURING);
     }

@@ -12,7 +12,6 @@ import com.foodfactory.dx.mapper.OrderLineMapper;
 import com.foodfactory.dx.mapper.ShipmentLineMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -122,9 +121,13 @@ public class MrpService {
         BigDecimal batchCountDecimal = netShortage.divide(standardBatchQty, 0, RoundingMode.CEILING);
         int batchCount = batchCountDecimal.intValue();
 
-        LocalDate today = LocalDate.now();
+        // MRPが生成するバッチは、まだどの日に作るか決まっていない「未配置プール」として作る
+        // (以前はLocalDate.now()を製造日として即座にセットしていたが、それだと
+        //  「まだ配置されていないのに、日付が決まっているように見える」という問題があったため、
+        //  デイリー画面で人が配置するまでは、意図的にbatchDateをnullのままにする。
+        //  要件定義書8.19節を参照)。
         for (int i = 0; i < batchCount; i++) {
-            ManufacturingBatch batch = manufacturingService.createAutoBatch(itemId, today, runId);
+            ManufacturingBatch batch = manufacturingService.createAutoBatch(itemId, null, runId);
             created.add(batch);
         }
 

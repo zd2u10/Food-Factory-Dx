@@ -3,10 +3,12 @@ package com.foodfactory.dx.controller;
 import com.foodfactory.dx.domain.BatchMaterialUsage;
 import com.foodfactory.dx.domain.ManufacturingBatch;
 import com.foodfactory.dx.dto.ActualUsageInput;
+import com.foodfactory.dx.dto.AssignToDateRequest;
 import com.foodfactory.dx.dto.CancelBatchRequest;
 import com.foodfactory.dx.dto.CompleteBatchRequest;
 import com.foodfactory.dx.dto.ConfirmPlanBulkRequest;
 import com.foodfactory.dx.dto.CreateBatchRequest;
+import com.foodfactory.dx.dto.ExecuteBatchRequest;
 import com.foodfactory.dx.dto.FefoAllocationResult;
 import com.foodfactory.dx.dto.RejectBatchRequest;
 import com.foodfactory.dx.service.ManufacturingService;
@@ -63,6 +65,23 @@ public class ManufacturingBatchController {
     }
 
     /**
+     * 未配置プールのDraftを、特定の日付に配置する
+     * (デイリー画面で、バッジをタップ/ドラッグして「〇月〇日の予定」に移す操作に対応)。
+     */
+    @PostMapping("/api/batches/{batchId}/assign-date")
+    public ResponseEntity<Void> assignToDate(@PathVariable Long batchId, @RequestBody AssignToDateRequest request) {
+        manufacturingService.assignToDate(batchId, request.getBatchDate());
+        return ResponseEntity.ok().build();
+    }
+
+    /** 配置済みのDraftを、未配置プールに戻す(誤って配置した場合の取り消し)。 */
+    @PostMapping("/api/batches/{batchId}/unassign-date")
+    public ResponseEntity<Void> unassignFromDate(@PathVariable Long batchId) {
+        manufacturingService.unassignFromDate(batchId);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
      * 複数のバッチをまとめてDRAFT → PLANに確定する(一括確定)。
      * 画面上で複数のDraftカードを選んでから、まとめて確定する操作に対応する想定。
      */
@@ -90,12 +109,12 @@ public class ManufacturingBatchController {
         return ResponseEntity.ok().build();
     }
 
-    /** PLAN → MANUFACTURING。作業員が実測した使用量をもとに製造を実行する。 */
+    /** PLAN → MANUFACTURING。作業員が実測した使用量(材料+加水)をもとに製造を実行する。 */
     @PostMapping("/api/batches/{batchId}/execute")
     public ResponseEntity<Void> execute(
             @PathVariable Long batchId,
-            @RequestBody List<ActualUsageInput> actualUsages) {
-        manufacturingService.executeBatch(batchId, actualUsages);
+            @RequestBody ExecuteBatchRequest request) {
+        manufacturingService.executeBatch(batchId, request.getActualUsages(), request.getActualHydrationQty());
         return ResponseEntity.ok().build();
     }
 

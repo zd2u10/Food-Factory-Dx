@@ -26,6 +26,9 @@ public interface ManufacturingBatchMapper {
 
     int updateStatus(@Param("batchId") Long batchId, @Param("status") ManufacturingBatch.Status status);
 
+    /** 実際に加えた水の実測量(ml)を記録する(製造実行時に呼ぶ)。 */
+    int updateActualHydrationQty(@Param("batchId") Long batchId, @Param("actualHydrationQty") java.math.BigDecimal actualHydrationQty);
+
     /**
      * 検品完了時の結果をまとめて反映し、ステータスをCOMPLETEDにする専用メソッド。
      * remainingQtyはacceptedQtyと同値で初期化する(フェーズ5で使用)。
@@ -75,6 +78,17 @@ public interface ManufacturingBatchMapper {
      * 取り消されたバッチが供給予定として残り続けることはない。
      */
     BigDecimal sumPlannedQtyByItemId(@Param("itemId") Long itemId);
+
+    /**
+     * 未配置プールのDraftを、特定の日付に配置する。
+     * batch_dateとbatch_seqを、この呼び出しの時点で初めてセットする
+     * (要件定義書8.19節: デイリー画面で人がバッジをタップ/ドラッグして配置する操作に対応)。
+     */
+    int assignToDate(@Param("batchId") Long batchId, @Param("batchDate") LocalDate batchDate,
+                      @Param("batchSeq") int batchSeq);
+
+    /** 配置済みのDraftを、未配置プールに戻す(batch_date/batch_seqをNULLに戻す)。 */
+    int unassignFromDate(@Param("batchId") Long batchId);
 
     /**
      * status=DRAFTのまま、created_atからdays日以上経過しているバッチを取得する。

@@ -23,6 +23,7 @@
         <result column="loss_comment" property="lossComment"/>
         <result column="reject_comment" property="rejectComment"/>
         <result column="cancel_comment" property="cancelComment"/>
+        <result column="actual_hydration_qty" property="actualHydrationQty"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
     </resultMap>
@@ -55,6 +56,29 @@
     <update id="updateStatus">
         UPDATE manufacturing_batch
         SET status = #{status}
+        WHERE batch_id = #{batchId}
+    </update>
+
+    <update id="updateActualHydrationQty">
+        UPDATE manufacturing_batch
+        SET actual_hydration_qty = #{actualHydrationQty}
+        WHERE batch_id = #{batchId}
+    </update>
+
+    <!-- 未配置プール(batch_date=NULL)のDraftを、特定の日付に配置する。 -->
+    <update id="assignToDate">
+        UPDATE manufacturing_batch
+        SET batch_date = #{batchDate},
+            batch_seq  = #{batchSeq}
+        WHERE batch_id = #{batchId}
+          AND batch_date IS NULL
+    </update>
+
+    <!-- 配置済みのDraftを、未配置プールに戻す。 -->
+    <update id="unassignFromDate">
+        UPDATE manufacturing_batch
+        SET batch_date = NULL,
+            batch_seq  = NULL
         WHERE batch_id = #{batchId}
     </update>
 
