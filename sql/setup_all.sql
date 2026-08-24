@@ -1,10 +1,6 @@
 -- =====================================================
--- 食品工場DXシステム 完全セットアップSQL(2026-08-21 最新版)
---
--- 【使い方】このファイル1本を、まっさらなMySQLに対して上から実行するだけで、
--- 現在のバックエンドコードが期待する最新のスキーマが作られる。
--- 既存のfood_factory_dxデータベースがある場合は、実行前にDROPされる
--- (テストデータは全て失われるので注意)。
+-- 食品工場DXシステム 完全セットアップSQL(2026-08-24 最新版)
+-- 実行前にfood_factory_dxを削除するので、テストデータは全て失われる。
 -- =====================================================
 
 DROP DATABASE IF EXISTS food_factory_dx;
@@ -219,6 +215,15 @@ CREATE TABLE material_lot (
   origin           VARCHAR(100) NOT NULL,
   expiry_date      DATE NOT NULL,
   remaining_qty    DECIMAL(10, 2) NOT NULL COMMENT '残量。消費/廃棄のたびにService層で減算する',
+  needs_review     BOOLEAN NOT NULL DEFAULT FALSE
+                   COMMENT '製造実行画面で「別ロットに切り替える」操作が行われた場合にtrueになる。
+                     trueのロットは、以降のFEFO自動選定(previewFefoAllocation)の対象から
+                     動的に除外される。人が検査結果を登録する(生存量入力/全量破棄)まで、
+                     残量(remaining_qty)自体はそのまま変更しない
+                     (「本当に全部ダメか、一部は使えるか」の判断を保留する設計。8.21節を参照)',
+  review_reason    ENUM('MIXING_MISTAKE', 'STORAGE_ISSUE', 'CONTAMINATION', 'OTHER') NULL
+                   COMMENT '要確認になった理由(配合ミス/保管ミス/異物混入/その他)',
+  review_comment   VARCHAR(255) NULL COMMENT '理由がOTHERの場合の自由記述、または補足コメント',
   created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_ml_material
@@ -356,7 +361,22 @@ CREATE TABLE stock_adjustment (
   before_qty       DECIMAL(10, 2) NOT NULL COMMENT '調整前の数量',
   after_qty        DECIMAL(10, 2) NOT NULL COMMENT '調整後の数量',
   adjustment_date  DATE NOT NULL,
-  comment          VARCHAR(255) NOT NULL COMMENT '調整理由(必須)',
+  usage_discard_reason ENUM('MIXING_MISTAKE', 'MATERIAL_DEFECT', 'CONTAMINATION', 'OTHER') NULL
+                   COMMENT '製造実行画面(FEFO)の「破棄する」操作による調整の場合の理由
+                     (配合ミス/材料の不備を確認/異物混入/その他)。
+                     在庫調整画面からの調整、その他の調整(結局受け入れ等)ではNULL。
+                     stock_review_reasonとは互いに排他的(どちらか一方だけが値を持つ)',
+  stock_review_reason  ENUM('EXPIRED', 'STORAGE_ISSUE', 'CONTAMINATION', 'OTHER') NULL
+                   COMMENT '在庫調整画面(検査結果登録)からの調整の場合の理由
+                     (期限切れ/保管ミス/異物混入/その他)。
+                     製造実行画面からの破棄、その他の調整ではNULL。
+                     usage_discard_reasonとは互いに排他的。
+                     理由をFEFO画面用・在庫調整画面用の2列に分けているのは、
+                     一方の画面で選ぶはずのない理由(期限切れのロットはFEFO候補に
+                     出てこない、配合ミスは在庫調整では起こらない、等)が、
+                     選択肢に混在しないようにするため(要件定義書8.22節を参照)',
+  comment          VARCHAR(255) NOT NULL COMMENT '調整理由の詳細(必須)。
+                     理由がOTHERの場合は、具体的な内容を必ず記入する',
   created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_sa_lot

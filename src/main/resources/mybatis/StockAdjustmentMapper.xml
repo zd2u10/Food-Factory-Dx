@@ -11,6 +11,8 @@
         <result column="before_qty" property="beforeQty"/>
         <result column="after_qty" property="afterQty"/>
         <result column="adjustment_date" property="adjustmentDate"/>
+        <result column="usage_discard_reason" property="usageDiscardReason"/>
+        <result column="stock_review_reason" property="stockReviewReason"/>
         <result column="comment" property="comment"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
@@ -18,8 +20,10 @@
 
     <insert id="insert" parameterType="com.foodfactory.dx.domain.StockAdjustment"
             useGeneratedKeys="true" keyProperty="adjustmentId">
-        INSERT INTO stock_adjustment (lot_id, before_qty, after_qty, adjustment_date, comment)
-        VALUES (#{lotId}, #{beforeQty}, #{afterQty}, #{adjustmentDate}, #{comment})
+        INSERT INTO stock_adjustment
+            (lot_id, before_qty, after_qty, adjustment_date, usage_discard_reason, stock_review_reason, comment)
+        VALUES
+            (#{lotId}, #{beforeQty}, #{afterQty}, #{adjustmentDate}, #{usageDiscardReason}, #{stockReviewReason}, #{comment})
     </insert>
 
     <select id="findByLotId" resultMap="adjustmentResultMap">

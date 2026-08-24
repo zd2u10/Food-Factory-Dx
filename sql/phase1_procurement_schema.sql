@@ -120,6 +120,15 @@ CREATE TABLE material_lot (
   origin           VARCHAR(100) NOT NULL,
   expiry_date      DATE NOT NULL,
   remaining_qty    DECIMAL(10, 2) NOT NULL COMMENT '残量。消費/廃棄のたびにService層で減算する',
+  needs_review     BOOLEAN NOT NULL DEFAULT FALSE
+                   COMMENT '製造実行画面で「別ロットに切り替える」操作が行われた場合にtrueになる。
+                     trueのロットは、以降のFEFO自動選定(previewFefoAllocation)の対象から
+                     動的に除外される。人が検査結果を登録する(生存量入力/全量破棄)まで、
+                     残量(remaining_qty)自体はそのまま変更しない
+                     (「本当に全部ダメか、一部は使えるか」の判断を保留する設計。8.21節を参照)',
+  review_reason    ENUM('STORAGE_ISSUE', 'CONTAMINATION', 'OTHER') NULL
+                   COMMENT '要確認になった理由(配合ミス/保管ミス/異物混入/その他)',
+  review_comment   VARCHAR(255) NULL COMMENT '理由がOTHERの場合の自由記述、または補足コメント',
   created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_ml_material

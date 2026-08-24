@@ -14,6 +14,9 @@
         <result column="origin" property="origin"/>
         <result column="expiry_date" property="expiryDate"/>
         <result column="remaining_qty" property="remainingQty"/>
+        <result column="needs_review" property="needsReview"/>
+        <result column="review_reason" property="reviewReason"/>
+        <result column="review_comment" property="reviewComment"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
     </resultMap>
@@ -32,16 +35,22 @@
       ORDER BY expiry_date ASC : 賞味期限が「近い(早い)」順に並べる指定。
       ASCは昇順(小さい値=日付が早いものが先頭)という意味で、
       これがそのままFEFO(期限が近いものを先に使う)の並び順になる。
+
+      needs_review = FALSE : 製造実行画面で「別ロットに切り替える」操作が行われ、
+      要確認フラグが立ったロットは、人が検査結果を登録するまで、
+      自動選定の対象から除外する(要件定義書8.21節を参照)。
     -->
     <select id="findByMaterialIdOrderByExpiry" resultMap="lotResultMap">
         SELECT *
         FROM material_lot
         WHERE material_id = #{materialId}
           AND remaining_qty > 0
+          AND needs_review = FALSE
         ORDER BY expiry_date ASC
     </select>
 
-    <!-- 在庫画面向け: 全材料について、残量が残っているロットを一括取得する。 -->
+    <!-- 在庫画面向け: 全材料について、残量が残っているロットを一括取得する(要確認分も含む、
+         画面側で要確認セクションと通常セクションに振り分けるため)。 -->
     <select id="findAllWithRemainingQty" resultMap="lotResultMap">
         SELECT *
         FROM material_lot
@@ -58,6 +67,36 @@
     <select id="findByArrivalLineId" resultMap="lotResultMap">
         SELECT * FROM material_lot WHERE arrival_line_id = #{arrivalLineId}
     </select>
+
+    <!-- 要確認フラグが立っているロットを、材料マスタと合わせて一覧取得する(在庫画面の要確認セクション用)。 -->
+    <select id="findNeedsReview" resultMap="lotResultMap">
+        SELECT * FROM material_lot WHERE needs_review = TRUE ORDER BY updated_at DESC
+    </select>
+
+    <!-- 「別ロットに切り替える」操作を行った際、そのロットに要確認フラグを立てる。 -->
+    <update id="markNeedsReview">
+        UPDATE material_lot
+        SET needs_review   = TRUE,
+            review_reason  = #{reviewReason},
+            review_comment = #{reviewComment}
+        WHERE lot_id = #{lotId}
+    </update>
+
+    <!--
+      検査結果を登録し、要確認フラグを解除する。
+      survivingQtyが指定された場合、remaining_qtyをその値に更新する
+      (生存量をそのまま新しい残量として確定させる。廃棄された分は、
+      Service層でstock_adjustmentに記録する)。
+      survivingQtyがnullの場合(全量破棄)、remaining_qtyは0にする。
+    -->
+    <update id="resolveReview">
+        UPDATE material_lot
+        SET needs_review   = FALSE,
+            remaining_qty  = #{survivingQty},
+            review_reason  = NULL,
+            review_comment = NULL
+        WHERE lot_id = #{lotId}
+    </update>
 
     <!--
       発注の充足率計算のうち、「結局受け入れ」(ACCEPTED_LATE)経由で生成された分を合算するためのクエリ。

@@ -72,4 +72,22 @@ public interface MaterialLotMapper {
      * または他の処理と競合した」と判断してエラーにする必要がある。
      */
     int decrementRemainingQty(@Param("lotId") Long lotId, @Param("usedQty") BigDecimal usedQty);
+
+    /** 要確認フラグが立っているロットを、材料マスタと合わせて一覧取得する(在庫画面の要確認セクション用)。 */
+    List<MaterialLot> findNeedsReview();
+
+    /**
+     * 「別ロットに切り替える」操作を行った際、そのロットに要確認フラグを立てる。
+     * FEFO自動選定(findByMaterialIdOrderByExpiry)は、needs_review=trueのロットを
+     * 動的に除外する(要件定義書8.21節を参照)。
+     */
+    int markNeedsReview(@Param("lotId") Long lotId, @Param("reviewReason") MaterialLot.ReviewReason reviewReason,
+                         @Param("reviewComment") String reviewComment);
+
+    /**
+     * 検査結果を登録し、要確認フラグを解除する。
+     * survivingQty(生存量)を、新しい残量としてそのまま確定させる。
+     * 全量破棄の場合はsurvivingQty=0を渡す。
+     */
+    int resolveReview(@Param("lotId") Long lotId, @Param("survivingQty") BigDecimal survivingQty);
 }

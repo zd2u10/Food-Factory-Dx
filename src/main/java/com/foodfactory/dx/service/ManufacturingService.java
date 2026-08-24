@@ -17,6 +17,7 @@ import com.foodfactory.dx.mapper.MaterialMapper;
 import com.foodfactory.dx.mapper.RecipeItemMapper;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -223,46 +224,106 @@ public class ManufacturingService {
         FefoAllocationResult result = new FefoAllocationResult();
 
         for (RecipeItem recipeItem : recipeItems) {
-            BigDecimal need = recipeItem.getUseQty();
+            List<FefoAllocationLine> lines = allocateForMaterial(recipeItem.getMaterialId(), recipeItem.getUseQty(),
+                    recipeItem.getAllowedOriginList());
+            result.getLines().addAll(lines);
 
-            // 材料が原料(RAW)か添加物(ADDITIVE)かで、FEFO選定の基準を切り替える。
-            //   原料  : 産地 + 賞味期限のルールで選定する(allowedOriginsで絞り込む)
-            //   添加物: 賞味期限のみで選定する(産地の概念がそもそも無いため)
-            // 【修正した不具合】以前は材料種別を区別せず一律で産地フィルターをかけていたため、
-            // 添加物のallowedOrigins(常に空)によって「空リストに含まれるものは無い」という判定になり、
-            // 添加物はどのロットも絶対に選定できず、FEFO計算が必ず失敗する不具合があった。
-            Material material = materialMapper.findById(recipeItem.getMaterialId()).orElse(null);
-            boolean isRawMaterial = material != null && material.getCategory() == Material.Category.RAW;
-            List<String> allowedOrigins = isRawMaterial ? recipeItem.getAllowedOriginList() : null;
-
-            List<MaterialLot> candidateLots = materialLotMapper
-                    .findByMaterialIdOrderByExpiry(recipeItem.getMaterialId());
-
-            BigDecimal remainingNeed = need;
-            for (MaterialLot lot : candidateLots) {
-                if (remainingNeed.compareTo(BigDecimal.ZERO) <= 0) {
-                    break;
-                }
-                // 原料の場合のみ産地チェックを行う。添加物(allowedOrigins == null)は無条件で候補にする。
-                if (allowedOrigins != null && !allowedOrigins.contains(lot.getOrigin())) {
-                    continue;
-                }
-
-                BigDecimal allocate = lot.getRemainingQty().min(remainingNeed);
-                result.getLines().add(new FefoAllocationLine(
-                        recipeItem.getMaterialId(), lot.getLotId(), lot.getSupplierLotNo(),
-                        lot.getOrigin(), allocate));
-                remainingNeed = remainingNeed.subtract(allocate);
-            }
-
-            if (remainingNeed.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal allocated = lines.stream().map(FefoAllocationLine::getAllocatedQty)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            if (allocated.compareTo(recipeItem.getUseQty()) < 0) {
                 result.setShortage(true);
+                Material material = materialMapper.findById(recipeItem.getMaterialId()).orElse(null);
                 String materialName = (material != null) ? material.getName() : "ID=" + recipeItem.getMaterialId();
                 result.getShortageMaterialNames().add(materialName);
             }
         }
 
         return result;
+    }
+
+    /**
+     * 1つの材料について、必要量(need)を満たすまで、FEFO順(賞味期限が近い順)に
+     * ロットを引き当てる。needs_review=trueのロットは、findByMaterialIdOrderByExpiry
+     * (Mapper層)の時点で既に除外されている。
+     *
+     * previewFefoAllocation(全材料分の一括プレビュー)と、「別ロットに切り替える」操作
+     * (1材料分だけを再選定する)の、両方から共通して使う。
+     */
+    private List<FefoAllocationLine> allocateForMaterial(Long materialId, BigDecimal need, List<String> allowedOriginsIfRaw) {
+        Material material = materialMapper.findById(materialId).orElse(null);
+        boolean isRawMaterial = material != null && material.getCategory() == Material.Category.RAW;
+        // 材料が原料(RAW)か添加物(ADDITIVE)かで、FEFO選定の基準を切り替える。
+        //   原料  : 産地 + 賞味期限のルールで選定する(allowedOriginsで絞り込む)
+        //   添加物: 賞味期限のみで選定する(産地の概念がそもそも無いため)
+        List<String> allowedOrigins = isRawMaterial ? allowedOriginsIfRaw : null;
+
+        List<MaterialLot> candidateLots = materialLotMapper.findByMaterialIdOrderByExpiry(materialId);
+
+        List<FefoAllocationLine> lines = new ArrayList<>();
+        BigDecimal remainingNeed = need;
+        for (MaterialLot lot : candidateLots) {
+            if (remainingNeed.compareTo(BigDecimal.ZERO) <= 0) {
+                break;
+            }
+            // 原料の場合のみ産地チェックを行う。添加物(allowedOrigins == null)は無条件で候補にする。
+            if (allowedOrigins != null && !allowedOrigins.contains(lot.getOrigin())) {
+                continue;
+            }
+
+            BigDecimal allocate = lot.getRemainingQty().min(remainingNeed);
+            lines.add(new FefoAllocationLine(materialId, lot.getLotId(), lot.getSupplierLotNo(),
+                    lot.getOrigin(), allocate));
+            remainingNeed = remainingNeed.subtract(allocate);
+        }
+        return lines;
+    }
+
+    /**
+     * 製造実行画面で「別ロットに切り替える」操作を行った際の処理。
+     *
+     * 1. 元のロット(lotId)に要確認フラグを立てる(残量自体は変更しない。
+     *    人が検査結果を登録するまで、判断を保留する設計。8.21節を参照)。
+     * 2. その材料について、あらためてFEFO選定を行う(要確認フラグにより、
+     *    元のロットは候補から自動的に除外される)。全量を、新しいロット(群)から
+     *    改めて選び直す(以前の実測値は、呼び出し元(フロント)で破棄する前提)。
+     *
+     * @return 新しく選定されたロットの一覧(1件とは限らない。新しいロットでも
+     *         不足する場合、複数ロットにまたがることがある)
+     */
+    @Transactional
+    public List<FefoAllocationLine> switchLot(Long lotId, MaterialLot.ReviewReason reviewReason,
+                                               String reviewComment, Long itemId) {
+        MaterialLot targetLot = materialLotMapper.findById(lotId)
+                .orElseThrow(() -> new IllegalArgumentException("指定された材料ロットが見つかりません: lotId=" + lotId));
+
+        materialLotMapper.markNeedsReview(lotId, reviewReason, reviewComment);
+
+        // 元のロットが、レシピの中でどれだけの量を担っていたか(=必要量)を、
+        // レシピから再取得して、その全量を新しいロットで賄えるよう再計算する。
+        RecipeItem recipeItem = recipeItemMapper.findByItemId(itemId).stream()
+                .filter(ri -> ri.getMaterialId().equals(targetLot.getMaterialId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "指定された商品のレシピに、この材料が見つかりません: itemId=" + itemId + ", materialId=" + targetLot.getMaterialId()));
+
+        return allocateForMaterial(targetLot.getMaterialId(), recipeItem.getUseQty(), recipeItem.getAllowedOriginList());
+    }
+
+    /**
+     * ロットを要確認状態にする(needs_reviewを立てるだけの単独操作)。
+     * 在庫画面(棚卸・日常の在庫管理)から呼ばれる想定。製造中のバッチとは無関係に、
+     * 「このロットを、以降の材料の自動選定から外したい」という単独の判断で使う。
+     *
+     * 【製造実行画面のswitchLotとの違い】switchLotは、要確認にすると同時に
+     * 「今使おうとしていた分を、別のロットで賄い直す」という再選定もセットで行うが、
+     * こちらは要確認にするだけで、再選定は行わない(在庫画面には、代替ロットを
+     * その場に表示する文脈が無いため)。
+     */
+    @Transactional
+    public void markLotAsNeedsReview(Long lotId, MaterialLot.ReviewReason reviewReason, String reviewComment) {
+        materialLotMapper.findById(lotId)
+                .orElseThrow(() -> new IllegalArgumentException("指定された材料ロットが見つかりません: lotId=" + lotId));
+        materialLotMapper.markNeedsReview(lotId, reviewReason, reviewComment);
     }
 
     /** 製造を実行する(PLAN → MANUFACTURING)。 */

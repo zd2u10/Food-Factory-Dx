@@ -45,7 +45,9 @@ public class ManufacturingBatch {
     private String lossComment;         // 軽微な不良の理由コメント
     private String rejectComment;       // REJECTEDになった場合の理由コメント
     private String cancelComment;       // CANCELLEDになった場合の理由コメント(製造開始前の取り消し)
-    private java.math.BigDecimal actualHydrationQty; // 実際に加えた水の実測量(ml)。トレーサビリティ記録用
+    private java.math.BigDecimal actualHydrationQty; // 実際の加水合計(水+液体添加物の合計量、ml)。
+                                                       // トレーサビリティ記録用。当初は水だけを入力する設計だったが、
+                                                       // 現場での使用感を踏まえ、最終的な合計量を直接入力する方式に変更した
 
     private LocalDateTime createdAt;    // 登録日時(DB側で自動設定)
     private LocalDateTime updatedAt;    // 更新日時(DB側で自動設定)
