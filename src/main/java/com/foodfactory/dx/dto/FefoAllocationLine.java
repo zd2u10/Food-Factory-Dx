@@ -17,17 +17,21 @@ public class FefoAllocationLine {
     private String supplierLotNo;
     private String origin;
     private BigDecimal allocatedQty; // このロットから使うべき量(理論値=suggestedQtyになる)
+    private Long originHoldId; // このロットが「結局受け入れ」(ACCEPTED_LATE)によって生成された
+                                // 場合、元になったhold_resolution.hold_id。通常のロットはnull
+                                // (製造実行画面で、保留対応を経た材料であることを示すバッジ表示に使う)
 
     public FefoAllocationLine() {
     }
 
     public FefoAllocationLine(Long materialId, Long materialLotId, String supplierLotNo,
-                               String origin, BigDecimal allocatedQty) {
+                               String origin, BigDecimal allocatedQty, Long originHoldId) {
         this.materialId = materialId;
         this.materialLotId = materialLotId;
         this.supplierLotNo = supplierLotNo;
         this.origin = origin;
         this.allocatedQty = allocatedQty;
+        this.originHoldId = originHoldId;
     }
 
     public Long getMaterialId() {
@@ -68,5 +72,13 @@ public class FefoAllocationLine {
 
     public void setAllocatedQty(BigDecimal allocatedQty) {
         this.allocatedQty = allocatedQty;
+    }
+
+    public Long getOriginHoldId() {
+        return originHoldId;
+    }
+
+    public void setOriginHoldId(Long originHoldId) {
+        this.originHoldId = originHoldId;
     }
 }

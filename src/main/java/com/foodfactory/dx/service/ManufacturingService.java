@@ -272,7 +272,7 @@ public class ManufacturingService {
 
             BigDecimal allocate = lot.getRemainingQty().min(remainingNeed);
             lines.add(new FefoAllocationLine(materialId, lot.getLotId(), lot.getSupplierLotNo(),
-                    lot.getOrigin(), allocate));
+                    lot.getOrigin(), allocate, lot.getOriginHoldId()));
             remainingNeed = remainingNeed.subtract(allocate);
         }
         return lines;
@@ -413,6 +413,23 @@ public class ManufacturingService {
 
     public List<BatchMaterialUsage> listUsagesByBatchId(Long batchId) {
         return batchMaterialUsageMapper.findByBatchId(batchId);
+    }
+
+    /**
+     * 指定したバッチが、「結局受け入れ」経由のロットを使用したかを判定する。
+     * 実行済み一覧・デイリー画面などで、保留対応を経た材料であることを示す
+     * バッジ表示に使う(要件定義書8.23節を参照)。
+     */
+    public boolean usedHeldLot(Long batchId) {
+        return batchMaterialUsageMapper.usedHeldLot(batchId);
+    }
+
+    /**
+     * 指定したバッチが、一度でも「要確認」→検査結果登録を経たロットを使用したかを判定する。
+     * usedHeldLotとはリスクの原因が異なるため、別々のバッジとして表示する想定。
+     */
+    public boolean usedReviewedLot(Long batchId) {
+        return batchMaterialUsageMapper.usedReviewedLot(batchId);
     }
 
     private ManufacturingBatch getBatchOrThrow(Long batchId) {

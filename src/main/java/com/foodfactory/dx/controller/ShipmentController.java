@@ -3,6 +3,8 @@ package com.foodfactory.dx.controller;
 import com.foodfactory.dx.domain.Shipment;
 import com.foodfactory.dx.dto.RegisterShipmentLineRequest;
 import com.foodfactory.dx.dto.ShipmentAllocationResult;
+import com.foodfactory.dx.dto.ShipmentLineDetail;
+import com.foodfactory.dx.dto.ShipmentSummary;
 import com.foodfactory.dx.service.ShipmentService;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -24,8 +26,14 @@ public class ShipmentController {
     }
 
     @GetMapping("/api/shipments")
-    public List<Shipment> list() {
+    public List<ShipmentSummary> list() {
         return shipmentService.listShipments();
+    }
+
+    /** 指定した出荷ヘッダーに含まれる、明細の詳細一覧を取得する(出荷一覧の「明細を見る」用)。 */
+    @GetMapping("/api/shipments/{shipmentId}/lines")
+    public List<ShipmentLineDetail> listLines(@PathVariable Long shipmentId) {
+        return shipmentService.listShipmentLineDetails(shipmentId);
     }
 
     @PostMapping("/api/shipments")

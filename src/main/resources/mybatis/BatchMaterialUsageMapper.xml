@@ -31,4 +31,30 @@
         SELECT * FROM batch_material_usage WHERE batch_id = #{batchId}
     </select>
 
+    <!-- そのバッチの使用実績(廃棄分を除く、実際に消費した分)から、
+         origin_hold_idを持つロット(結局受け入れ経由)が1件でもあるか判定する。 -->
+    <select id="usedHeldLot" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM batch_material_usage bmu
+                     JOIN material_lot ml ON bmu.material_lot_id = ml.lot_id
+            WHERE bmu.batch_id = #{batchId}
+              AND bmu.usage_type = 'CONSUMPTION'
+              AND ml.origin_hold_id IS NOT NULL
+        )
+    </select>
+
+    <!-- was_reviewed = true (一度でも要確認→検査結果登録を経た)ロットが、
+         そのバッチで使われていたか判定する。usedHeldLotとは別のリスク原因として判定する。 -->
+    <select id="usedReviewedLot" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM batch_material_usage bmu
+                     JOIN material_lot ml ON bmu.material_lot_id = ml.lot_id
+            WHERE bmu.batch_id = #{batchId}
+              AND bmu.usage_type = 'CONSUMPTION'
+              AND ml.was_reviewed = TRUE
+        )
+    </select>
+
 </mapper>

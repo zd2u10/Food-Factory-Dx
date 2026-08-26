@@ -1,5 +1,5 @@
 -- =====================================================
--- 食品工場DXシステム 完全セットアップSQL(2026-08-24 最新版)
+-- 食品工場DXシステム 完全セットアップSQL(2026-08-25 最新版)
 -- 実行前にfood_factory_dxを削除するので、テストデータは全て失われる。
 -- =====================================================
 
@@ -221,9 +221,16 @@ CREATE TABLE material_lot (
                      動的に除外される。人が検査結果を登録する(生存量入力/全量破棄)まで、
                      残量(remaining_qty)自体はそのまま変更しない
                      (「本当に全部ダメか、一部は使えるか」の判断を保留する設計。8.21節を参照)',
-  review_reason    ENUM('MIXING_MISTAKE', 'STORAGE_ISSUE', 'CONTAMINATION', 'OTHER') NULL
+  review_reason    ENUM('STORAGE_ISSUE', 'CONTAMINATION', 'OTHER') NULL
                    COMMENT '要確認になった理由(配合ミス/保管ミス/異物混入/その他)',
   review_comment   VARCHAR(255) NULL COMMENT '理由がOTHERの場合の自由記述、または補足コメント',
+  was_reviewed     BOOLEAN NOT NULL DEFAULT FALSE
+                   COMMENT '一度でも「要確認」→検査結果登録(生存量として復帰)を経た場合、trueになる。
+                     needs_reviewが解除された後も、この履歴は消さずに残す。
+                     製造実績一覧で「検査後の材料を使用」バッジを表示するために使う
+                     (要件定義書8.23節を参照。origin_hold_idによる「結局受け入れ経由」の
+                     バッジとは、リスクの原因(入荷時検品 vs 保管中の劣化)が異なるため、
+                     別々のバッジとして区別する)',
   created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_ml_material

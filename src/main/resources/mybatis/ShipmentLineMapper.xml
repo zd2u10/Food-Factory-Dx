@@ -29,6 +29,13 @@
         SELECT * FROM shipment_line WHERE order_line_id = #{orderLineId}
     </select>
 
+    <select id="findOrderIdsByShipmentId" resultType="java.lang.Long">
+        SELECT DISTINCT ol.order_id
+        FROM shipment_line sl
+                 JOIN order_line ol ON sl.order_line_id = ol.line_id
+        WHERE sl.shipment_id = #{shipmentId}
+    </select>
+
     <select id="sumShippedQtyByOrderLineId" resultType="java.math.BigDecimal">
         SELECT COALESCE(SUM(shipped_qty), 0)
         FROM shipment_line

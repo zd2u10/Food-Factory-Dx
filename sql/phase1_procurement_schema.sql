@@ -129,6 +129,13 @@ CREATE TABLE material_lot (
   review_reason    ENUM('STORAGE_ISSUE', 'CONTAMINATION', 'OTHER') NULL
                    COMMENT '要確認になった理由(配合ミス/保管ミス/異物混入/その他)',
   review_comment   VARCHAR(255) NULL COMMENT '理由がOTHERの場合の自由記述、または補足コメント',
+  was_reviewed     BOOLEAN NOT NULL DEFAULT FALSE
+                   COMMENT '一度でも「要確認」→検査結果登録(生存量として復帰)を経た場合、trueになる。
+                     needs_reviewが解除された後も、この履歴は消さずに残す。
+                     製造実績一覧で「検査後の材料を使用」バッジを表示するために使う
+                     (要件定義書8.23節を参照。origin_hold_idによる「結局受け入れ経由」の
+                     バッジとは、リスクの原因(入荷時検品 vs 保管中の劣化)が異なるため、
+                     別々のバッジとして区別する)',
   created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_ml_material

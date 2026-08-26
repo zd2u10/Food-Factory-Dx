@@ -40,6 +40,8 @@ public class MaterialLot {
                                         // 人が検査結果を登録するまで、remainingQty自体は変更しない
     private ReviewReason reviewReason; // 要確認になった理由
     private String reviewComment;      // 理由がOTHERの場合の自由記述、または補足コメント
+    private boolean wasReviewed;       // 一度でも「要確認」→検査結果登録(生存量として復帰)を
+                                        // 経た場合true。needsReview解除後も履歴として残る
     private LocalDateTime createdAt;   // 登録日時(DB側で自動設定)
     private LocalDateTime updatedAt;   // 更新日時(DB側で自動設定)
 
@@ -142,6 +144,14 @@ public class MaterialLot {
 
     public void setReviewComment(String reviewComment) {
         this.reviewComment = reviewComment;
+    }
+
+    public boolean isWasReviewed() {
+        return wasReviewed;
+    }
+
+    public void setWasReviewed(boolean wasReviewed) {
+        this.wasReviewed = wasReviewed;
     }
 
     public LocalDateTime getCreatedAt() {

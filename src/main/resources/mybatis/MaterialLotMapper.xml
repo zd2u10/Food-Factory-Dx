@@ -17,6 +17,7 @@
         <result column="needs_review" property="needsReview"/>
         <result column="review_reason" property="reviewReason"/>
         <result column="review_comment" property="reviewComment"/>
+        <result column="was_reviewed" property="wasReviewed"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
     </resultMap>
@@ -94,7 +95,8 @@
         SET needs_review   = FALSE,
             remaining_qty  = #{survivingQty},
             review_reason  = NULL,
-            review_comment = NULL
+            review_comment = NULL,
+            was_reviewed   = TRUE
         WHERE lot_id = #{lotId}
     </update>
 

@@ -57,6 +57,18 @@ public class ManufacturingBatchController {
         return manufacturingService.listUsagesByBatchId(batchId);
     }
 
+    /** そのバッチが「結局受け入れ」経由のロットを使用したかを判定する(バッジ表示用)。 */
+    @GetMapping("/api/batches/{batchId}/used-held-lot")
+    public boolean usedHeldLot(@PathVariable Long batchId) {
+        return manufacturingService.usedHeldLot(batchId);
+    }
+
+    /** そのバッチが「要確認→検査結果登録」を経たロットを使用したかを判定する(バッジ表示用)。 */
+    @GetMapping("/api/batches/{batchId}/used-reviewed-lot")
+    public boolean usedReviewedLot(@PathVariable Long batchId) {
+        return manufacturingService.usedReviewedLot(batchId);
+    }
+
     /** DRAFT → PLAN。バッチの内容を確定する。 */
     @PostMapping("/api/batches/{batchId}/confirm-plan")
     public ResponseEntity<Void> confirmPlan(@PathVariable Long batchId) {

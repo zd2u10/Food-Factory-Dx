@@ -10,6 +10,8 @@ import com.foodfactory.dx.domain.ShipmentLine;
 import com.foodfactory.dx.dto.BatchAllocationInput;
 import com.foodfactory.dx.dto.ShipmentAllocationLine;
 import com.foodfactory.dx.dto.ShipmentAllocationResult;
+import com.foodfactory.dx.dto.ShipmentLineDetail;
+import com.foodfactory.dx.dto.ShipmentSummary;
 import com.foodfactory.dx.mapper.CustomerMapper;
 import com.foodfactory.dx.mapper.CustomerOrderMapper;
 import com.foodfactory.dx.mapper.ItemMapper;
@@ -21,6 +23,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,8 +74,46 @@ public class ShipmentService {
         return shipment;
     }
 
-    public List<Shipment> listShipments() {
-        return shipmentMapper.findAll();
+    /**
+     * 出荷一覧を、受注ID・取引先名を含めた表示用DTOとして取得する。
+     * 一覧では「出荷ID・受注ID・取引先」を主役として見せたいという要望に基づく
+     * (要件定義書8.24節を参照)。
+     */
+    public List<ShipmentSummary> listShipments() {
+        List<Shipment> shipments = shipmentMapper.findAll();
+        return shipments.stream()
+                .map(shipment -> {
+                    List<Long> orderIds = shipmentLineMapper.findOrderIdsByShipmentId(shipment.getShipmentId());
+                    String customerName = orderIds.stream()
+                            .findFirst()
+                            .flatMap(customerOrderMapper::findById)
+                            .flatMap(order -> customerMapper.findById(order.getCustomerId()))
+                            .map(Customer::getName)
+                            .orElse("不明");
+                    return ShipmentSummary.from(shipment, orderIds, customerName);
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 指定した出荷ヘッダーに含まれる、明細の詳細一覧を取得する。
+     * shipment_line → order_line(商品ID)、shipment_line → manufacturing_batch
+     * (製造日・連番、ロット番号の組み立てに使う)を、まとめて1件ずつ組み立てて返す。
+     */
+    public List<ShipmentLineDetail> listShipmentLineDetails(Long shipmentId) {
+        List<ShipmentLine> shipmentLines = shipmentLineMapper.findByShipmentId(shipmentId);
+        return shipmentLines.stream()
+                .map(line -> {
+                    OrderLine orderLine = orderLineMapper.findById(line.getOrderLineId())
+                            .orElseThrow(() -> new IllegalStateException(
+                                    "出荷明細に紐づく受注明細が見つかりません: orderLineId=" + line.getOrderLineId()));
+                    ManufacturingBatch batch = manufacturingBatchMapper.findById(line.getBatchId())
+                            .orElseThrow(() -> new IllegalStateException(
+                                    "出荷明細に紐づくバッチが見つかりません: batchId=" + line.getBatchId()));
+                    return new ShipmentLineDetail(line.getLineId(), orderLine.getItemId(), line.getShippedQty(),
+                            batch.getBatchId(), batch.getBatchDate(), batch.getBatchSeq());
+                })
+                .collect(Collectors.toList());
     }
 
     /**
