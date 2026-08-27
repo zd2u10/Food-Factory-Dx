@@ -1,5 +1,6 @@
 package com.foodfactory.dx.exception;
 
+import com.foodfactory.dx.config.AuthUtil;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -50,5 +51,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(Map.of("error", ex.getMessage()));
+    }
+
+    /**
+     * 権限レベル不足のエラー。403 Forbiddenを返し、要求レベル・現在のレベルも
+     * レスポンスに含める(フロント側で「スロー処理」の確認画面を組み立てるために使う。
+     * 要件定義書8.28節を参照)。
+     */
+    @ExceptionHandler(AuthUtil.InsufficientAccessLevelException.class)
+    public ResponseEntity<Map<String, Object>> handleInsufficientAccessLevel(AuthUtil.InsufficientAccessLevelException ex) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(Map.of(
+                        "error", ex.getMessage(),
+                        "requiredLevel", ex.getRequiredLevel(),
+                        "currentLevel", ex.getCurrentLevel()
+                ));
     }
 }

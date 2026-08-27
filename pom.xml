@@ -47,6 +47,16 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!--
+          認証(ログイン)・認可(権限レベルによるアクセス制御)のためのパッケージ。
+          セッションベース認証(要件定義書8.27節を参照)と、パスワードのハッシュ化に使う
+          BCryptPasswordEncoder が、どちらもこの1パッケージに含まれている。
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
         <!-- MySQL 8.0用JDBCドライバ -->
         <dependency>
             <groupId>com.mysql</groupId>

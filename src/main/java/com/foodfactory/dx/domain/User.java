@@ -1,5 +1,6 @@
 package com.foodfactory.dx.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 
 /**
@@ -38,6 +39,12 @@ public class User {
         this.username = username;
     }
 
+    /**
+     * パスワードハッシュは、絶対にAPIレスポンス(JSON)に含めてはならないため、
+     * @JsonIgnore を付ける(ログイン成功時やGET /api/auth/meで、Userオブジェクトを
+     * そのまま返しているため、これが無いとハッシュ値がフロントに丸見えになってしまう)。
+     */
+    @JsonIgnore
     public String getPasswordHash() {
         return passwordHash;
     }
