@@ -1,5 +1,5 @@
 -- =====================================================
--- 食品工場DXシステム 完全セットアップSQL(2026-08-25 最新版)
+-- 食品工場DXシステム 完全セットアップSQL(2026-08-27 最新版)
 -- 実行前にfood_factory_dxを削除するので、テストデータは全て失われる。
 -- =====================================================
 
@@ -91,6 +91,34 @@ CREATE TABLE recipe_item (
     FOREIGN KEY (material_id) REFERENCES material (material_id),
   CONSTRAINT uq_ri_item_material UNIQUE (item_id, material_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -----------------------------------------------------
+-- ユーザーアカウント
+--
+-- 業務理解レベルによる3階層の権限モデル(要件定義書8.27節を参照):
+--   1 = 一般作業員(日々のオペレーション: 入荷登録・出荷処理・製造実行など)
+--   2 = 主任・リーダー(業務理解を要する判断: マスタ編集・受注登録・
+--       在庫の検査結果登録/廃棄・Draftの配置/PLAN確定・バッチの取り消し等)
+--   3 = 管理者(マスタの廃版・無効化、ユーザー管理など、最も重大な操作)
+--
+-- パスワードは平文では一切保存せず、必ずBCryptでハッシュ化した文字列
+-- (password_hash)のみを保存する。ログイン時は、入力値を都度ハッシュ化して
+-- 照合する(セッションベース認証、要件定義書8.27節を参照)。
+-- -----------------------------------------------------
+CREATE TABLE user (
+  user_id       BIGINT AUTO_INCREMENT PRIMARY KEY,
+  username      VARCHAR(50) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL COMMENT 'BCryptでハッシュ化した文字列。平文は保存しない',
+  access_level  TINYINT NOT NULL COMMENT '1=一般作業員, 2=主任・リーダー, 3=管理者',
+  is_active     BOOLEAN NOT NULL DEFAULT TRUE COMMENT '退職者等の無効化用(削除ではなくフラグで管理)',
+  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 初期管理者アカウント。パスワードは "admin123"(BCryptでハッシュ化済み)。
+-- ログイン後、パスワード変更機能で、必ず変更すること。
+INSERT INTO user (username, password_hash, access_level, is_active)
+VALUES ('システム設計者', '$2b$12$.roD4fAbPX2PuAuF9byC3uobdA2Iv18LhrQm7bvujECbwM81Za9k2', 3, TRUE);
 
 -- ===== phase1_procurement_schema.sql =====
 -- =====================================================
@@ -400,6 +428,38 @@ ALTER TABLE material_lot
   ADD COLUMN origin_hold_id BIGINT NULL AFTER arrival_line_id,
   ADD CONSTRAINT fk_ml_origin_hold
     FOREIGN KEY (origin_hold_id) REFERENCES hold_resolution (hold_id);
+
+-- -----------------------------------------------------
+-- 商品在庫調整履歴
+--
+-- material_lot向けのstock_adjustmentと同じ考え方で、manufacturing_batch
+-- (COMPLETED状態、商品ロットとして在庫化されたもの)に対する手動調整
+-- (棚卸で見つかった保管・取り扱い不良、期限切れ等による廃棄)を記録する。
+-- remaining_qtyを直接書き換えるのではなく、必ずこのテーブルを経由して
+-- 変更履歴(調整前・調整後・理由)を残す運用にする(要件定義書8.25節を参照)。
+--
+-- 【対象範囲】このテーブルで扱うのは、COMPLETED(検品完了・在庫化済み)の
+-- 商品ロットに対する、バックヤード(在庫保管)担当者による調整のみ。
+-- MANUFACTURING中の重大な異常による破棄(REJECTED)は、製造現場の既存機能
+-- (completeBatch画面の「重大な異常のため破棄する」)で引き続き扱う。
+-- -----------------------------------------------------
+CREATE TABLE item_stock_adjustment (
+  adjustment_id    BIGINT AUTO_INCREMENT PRIMARY KEY,
+  batch_id         BIGINT NOT NULL,
+  before_qty       DECIMAL(10, 2) NOT NULL COMMENT '調整前の残数量(remaining_qty)',
+  after_qty        DECIMAL(10, 2) NOT NULL COMMENT '調整後の残数量',
+  adjustment_date  DATE NOT NULL,
+  adjustment_reason ENUM('STORAGE_HANDLING_ISSUE', 'EXPIRED', 'OTHER') NOT NULL
+                   COMMENT '保管・取り扱い不良/期限切れ/その他。
+                     保管ミスと破損は、原因分類としての実務的な意味が薄いため
+                     1つに統合している(要件定義書8.25節を参照)',
+  comment          VARCHAR(255) NOT NULL COMMENT '調整理由の詳細(必須)。
+                     理由がOTHERの場合は、具体的な内容を必ず記入する',
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_isa_batch
+    FOREIGN KEY (batch_id) REFERENCES manufacturing_batch (batch_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ===== phase4_mrp_schema.sql =====
 -- =====================================================

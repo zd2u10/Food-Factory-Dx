@@ -4,13 +4,16 @@ import com.foodfactory.dx.domain.BatchMaterialUsage;
 import com.foodfactory.dx.domain.ManufacturingBatch;
 import com.foodfactory.dx.dto.ActualUsageInput;
 import com.foodfactory.dx.dto.AssignToDateRequest;
+import com.foodfactory.dx.dto.BatchMaterialUsageDetail;
 import com.foodfactory.dx.dto.CancelBatchRequest;
 import com.foodfactory.dx.dto.CompleteBatchRequest;
 import com.foodfactory.dx.dto.ConfirmPlanBulkRequest;
 import com.foodfactory.dx.dto.CreateBatchRequest;
+import com.foodfactory.dx.dto.DiscardItemStockRequest;
 import com.foodfactory.dx.dto.ExecuteBatchRequest;
 import com.foodfactory.dx.dto.FefoAllocationResult;
 import com.foodfactory.dx.dto.RejectBatchRequest;
+import com.foodfactory.dx.service.ItemStockService;
 import com.foodfactory.dx.service.ManufacturingService;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -26,9 +29,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ManufacturingBatchController {
 
     private final ManufacturingService manufacturingService;
+    private final ItemStockService itemStockService;
 
-    public ManufacturingBatchController(ManufacturingService manufacturingService) {
+    public ManufacturingBatchController(ManufacturingService manufacturingService, ItemStockService itemStockService) {
         this.manufacturingService = manufacturingService;
+        this.itemStockService = itemStockService;
     }
 
     /** 指定した商品のバッチ(Draft)を新規作成する。 */
@@ -57,6 +62,12 @@ public class ManufacturingBatchController {
         return manufacturingService.listUsagesByBatchId(batchId);
     }
 
+    /** 製造実績一覧の「使用材料の内訳を見る」用に、材料名・ロット番号を含めた詳細一覧を返す。 */
+    @GetMapping("/api/batches/{batchId}/usage-details")
+    public List<BatchMaterialUsageDetail> listUsageDetails(@PathVariable Long batchId) {
+        return manufacturingService.listUsageDetailsByBatchId(batchId);
+    }
+
     /** そのバッチが「結局受け入れ」経由のロットを使用したかを判定する(バッジ表示用)。 */
     @GetMapping("/api/batches/{batchId}/used-held-lot")
     public boolean usedHeldLot(@PathVariable Long batchId) {
@@ -67,6 +78,17 @@ public class ManufacturingBatchController {
     @GetMapping("/api/batches/{batchId}/used-reviewed-lot")
     public boolean usedReviewedLot(@PathVariable Long batchId) {
         return manufacturingService.usedReviewedLot(batchId);
+    }
+
+    /**
+     * 商品在庫タブ(バックヤード担当)から、COMPLETED状態の商品ロットを廃棄する。
+     * MANUFACTURING中の破棄(reject)とは別の、在庫保管中に見つかった不良への対応
+     * (要件定義書8.25節を参照)。
+     */
+    @PostMapping("/api/batches/{batchId}/discard-item-stock")
+    public ResponseEntity<Void> discardItemStock(@PathVariable Long batchId, @RequestBody DiscardItemStockRequest request) {
+        itemStockService.discardItemStock(batchId, request.getDiscardQty(), request.getReason(), request.getComment());
+        return ResponseEntity.ok().build();
     }
 
     /** DRAFT → PLAN。バッチの内容を確定する。 */

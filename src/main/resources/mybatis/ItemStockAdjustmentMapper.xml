@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.foodfactory.dx.mapper.ItemStockAdjustmentMapper">
+
+    <resultMap id="itemAdjustmentResultMap" type="com.foodfactory.dx.domain.ItemStockAdjustment">
+        <id column="adjustment_id" property="adjustmentId"/>
+        <result column="batch_id" property="batchId"/>
+        <result column="before_qty" property="beforeQty"/>
+        <result column="after_qty" property="afterQty"/>
+        <result column="adjustment_date" property="adjustmentDate"/>
+        <result column="adjustment_reason" property="adjustmentReason"/>
+        <result column="comment" property="comment"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.foodfactory.dx.domain.ItemStockAdjustment"
+            useGeneratedKeys="true" keyProperty="adjustmentId">
+        INSERT INTO item_stock_adjustment (batch_id, before_qty, after_qty, adjustment_date, adjustment_reason, comment)
+        VALUES (#{batchId}, #{beforeQty}, #{afterQty}, #{adjustmentDate}, #{adjustmentReason}, #{comment})
+    </insert>
+
+    <select id="findByBatchId" resultMap="itemAdjustmentResultMap">
+        SELECT * FROM item_stock_adjustment WHERE batch_id = #{batchId} ORDER BY created_at DESC
+    </select>
+
+</mapper>

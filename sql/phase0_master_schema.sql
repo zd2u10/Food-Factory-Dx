@@ -83,3 +83,31 @@ CREATE TABLE recipe_item (
     FOREIGN KEY (material_id) REFERENCES material (material_id),
   CONSTRAINT uq_ri_item_material UNIQUE (item_id, material_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -----------------------------------------------------
+-- ユーザーアカウント
+--
+-- 業務理解レベルによる3階層の権限モデル(要件定義書8.27節を参照):
+--   1 = 一般作業員(日々のオペレーション: 入荷登録・出荷処理・製造実行など)
+--   2 = 主任・リーダー(業務理解を要する判断: マスタ編集・受注登録・
+--       在庫の検査結果登録/廃棄・Draftの配置/PLAN確定・バッチの取り消し等)
+--   3 = 管理者(マスタの廃版・無効化、ユーザー管理など、最も重大な操作)
+--
+-- パスワードは平文では一切保存せず、必ずBCryptでハッシュ化した文字列
+-- (password_hash)のみを保存する。ログイン時は、入力値を都度ハッシュ化して
+-- 照合する(セッションベース認証、要件定義書8.27節を参照)。
+-- -----------------------------------------------------
+CREATE TABLE user (
+  user_id       BIGINT AUTO_INCREMENT PRIMARY KEY,
+  username      VARCHAR(50) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL COMMENT 'BCryptでハッシュ化した文字列。平文は保存しない',
+  access_level  TINYINT NOT NULL COMMENT '1=一般作業員, 2=主任・リーダー, 3=管理者',
+  is_active     BOOLEAN NOT NULL DEFAULT TRUE COMMENT '退職者等の無効化用(削除ではなくフラグで管理)',
+  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 初期管理者アカウント。パスワードは "admin123"(BCryptでハッシュ化済み)。
+-- ログイン後、パスワード変更機能で、必ず変更すること。
+INSERT INTO user (username, password_hash, access_level, is_active)
+VALUES ('システム設計者', '$2b$12$.roD4fAbPX2PuAuF9byC3uobdA2Iv18LhrQm7bvujECbwM81Za9k2', 3, TRUE);

@@ -7,6 +7,7 @@ import com.foodfactory.dx.domain.Material;
 import com.foodfactory.dx.domain.MaterialLot;
 import com.foodfactory.dx.domain.RecipeItem;
 import com.foodfactory.dx.dto.ActualUsageInput;
+import com.foodfactory.dx.dto.BatchMaterialUsageDetail;
 import com.foodfactory.dx.dto.FefoAllocationLine;
 import com.foodfactory.dx.dto.FefoAllocationResult;
 import com.foodfactory.dx.mapper.BatchMaterialUsageMapper;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -413,6 +415,36 @@ public class ManufacturingService {
 
     public List<BatchMaterialUsage> listUsagesByBatchId(Long batchId) {
         return batchMaterialUsageMapper.findByBatchId(batchId);
+    }
+
+    /**
+     * 製造実績一覧の「使用材料の内訳を見る」で表示する、詳細情報付きの一覧を取得する。
+     * batch_material_usage → material_lot → material を辿って、
+     * 材料名・仕入先ロット番号まで含めて返す(要件定義書8.26節を参照)。
+     */
+    public List<BatchMaterialUsageDetail> listUsageDetailsByBatchId(Long batchId) {
+        List<BatchMaterialUsage> usages = batchMaterialUsageMapper.findByBatchId(batchId);
+        return usages.stream()
+                .map(usage -> {
+                    MaterialLot lot = materialLotMapper.findById(usage.getMaterialLotId()).orElse(null);
+                    String materialName = "不明";
+                    Long materialId = null;
+                    String supplierLotNo = "不明";
+                    Long originHoldId = null;
+                    if (lot != null) {
+                        supplierLotNo = lot.getSupplierLotNo();
+                        materialId = lot.getMaterialId();
+                        originHoldId = lot.getOriginHoldId();
+                        Material material = materialMapper.findById(lot.getMaterialId()).orElse(null);
+                        if (material != null) {
+                            materialName = material.getName();
+                        }
+                    }
+                    return new BatchMaterialUsageDetail(usage.getUsageId(), materialId, materialName, supplierLotNo,
+                            usage.getSuggestedQty(), usage.getUsedQty(), usage.getUsageType(), usage.getComment(),
+                            originHoldId);
+                })
+                .collect(Collectors.toList());
     }
 
     /**

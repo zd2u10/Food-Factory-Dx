@@ -75,3 +75,35 @@ ALTER TABLE material_lot
   ADD COLUMN origin_hold_id BIGINT NULL AFTER arrival_line_id,
   ADD CONSTRAINT fk_ml_origin_hold
     FOREIGN KEY (origin_hold_id) REFERENCES hold_resolution (hold_id);
+
+-- -----------------------------------------------------
+-- 商品在庫調整履歴
+--
+-- material_lot向けのstock_adjustmentと同じ考え方で、manufacturing_batch
+-- (COMPLETED状態、商品ロットとして在庫化されたもの)に対する手動調整
+-- (棚卸で見つかった保管・取り扱い不良、期限切れ等による廃棄)を記録する。
+-- remaining_qtyを直接書き換えるのではなく、必ずこのテーブルを経由して
+-- 変更履歴(調整前・調整後・理由)を残す運用にする(要件定義書8.25節を参照)。
+--
+-- 【対象範囲】このテーブルで扱うのは、COMPLETED(検品完了・在庫化済み)の
+-- 商品ロットに対する、バックヤード(在庫保管)担当者による調整のみ。
+-- MANUFACTURING中の重大な異常による破棄(REJECTED)は、製造現場の既存機能
+-- (completeBatch画面の「重大な異常のため破棄する」)で引き続き扱う。
+-- -----------------------------------------------------
+CREATE TABLE item_stock_adjustment (
+  adjustment_id    BIGINT AUTO_INCREMENT PRIMARY KEY,
+  batch_id         BIGINT NOT NULL,
+  before_qty       DECIMAL(10, 2) NOT NULL COMMENT '調整前の残数量(remaining_qty)',
+  after_qty        DECIMAL(10, 2) NOT NULL COMMENT '調整後の残数量',
+  adjustment_date  DATE NOT NULL,
+  adjustment_reason ENUM('STORAGE_HANDLING_ISSUE', 'EXPIRED', 'OTHER') NOT NULL
+                   COMMENT '保管・取り扱い不良/期限切れ/その他。
+                     保管ミスと破損は、原因分類としての実務的な意味が薄いため
+                     1つに統合している(要件定義書8.25節を参照)',
+  comment          VARCHAR(255) NOT NULL COMMENT '調整理由の詳細(必須)。
+                     理由がOTHERの場合は、具体的な内容を必ず記入する',
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_isa_batch
+    FOREIGN KEY (batch_id) REFERENCES manufacturing_batch (batch_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
