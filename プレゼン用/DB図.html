@@ -1,0 +1,200 @@
+<style>
+#erd svg.erDiagram .divider path { stroke-opacity: 0.5; }
+#erd svg.erDiagram .row-rect-odd path,
+#erd svg.erDiagram .row-rect-odd rect,
+#erd svg.erDiagram .row-rect-even path,
+#erd svg.erDiagram .row-rect-even rect { stroke: none !important; }
+#erd { overflow-x: auto; }
+</style>
+<div id="erd"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const themeMode = document.documentElement.dataset.mode;
+const dark = themeMode ? themeMode === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"anthropic-sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"anthropic-sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+  },
+});
+const source = `erDiagram
+  MATERIAL ||--o{ MATERIAL_PACKAGE_SPEC : has
+  MATERIAL ||--o{ RECIPE_ITEM : "used in"
+  MATERIAL ||--o{ MATERIAL_ORDER : ordered
+  MATERIAL ||--o{ MATERIAL_ARRIVAL_LINE : arrives
+  MATERIAL ||--o{ MATERIAL_LOT : "becomes lot"
+  ITEMS ||--o{ RECIPE_ITEM : has
+  ITEMS ||--o{ MANUFACTURING_BATCH : produces
+  ITEMS ||--o{ ORDER_LINE : ordered
+  SUPPLIER ||--o{ MATERIAL_ORDER : receives
+  SUPPLIER ||--o{ MATERIAL_ARRIVAL : ships
+  MATERIAL_ORDER ||--o{ MATERIAL_ARRIVAL_LINE : fulfills
+  MATERIAL_ARRIVAL ||--o{ MATERIAL_ARRIVAL_LINE : contains
+  MATERIAL_ARRIVAL_LINE ||--o| MATERIAL_LOT : creates
+  MATERIAL_ARRIVAL_LINE ||--o{ HOLD_RESOLUTION : "holds on"
+  HOLD_RESOLUTION ||--o| MATERIAL_LOT : "origin of"
+  MATERIAL_LOT ||--o{ BATCH_MATERIAL_USAGE : "consumed by"
+  MATERIAL_LOT ||--o{ STOCK_ADJUSTMENT : adjusted
+  MANUFACTURING_BATCH ||--o{ BATCH_MATERIAL_USAGE : uses
+  MANUFACTURING_BATCH ||--o{ ITEM_STOCK_ADJUSTMENT : adjusted
+  MANUFACTURING_BATCH ||--o{ SHIPMENT_LINE : shipped
+  MANUFACTURING_BATCH ||--o{ BATCH_ORDER_ALLOCATION : allocated
+  MRP_RUN ||--o{ MANUFACTURING_BATCH : generates
+  CUSTOMER ||--o{ CUSTOMER_ORDER : places
+  CUSTOMER_ORDER ||--o{ ORDER_LINE : contains
+  ORDER_LINE ||--o{ SHIPMENT_LINE : fulfilled
+  ORDER_LINE ||--o{ BATCH_ORDER_ALLOCATION : allocates
+  CARRIER ||--o{ SHIPMENT : delivers
+  SHIPMENT ||--o{ SHIPMENT_LINE : contains
+
+  MATERIAL {
+    bigint material_id PK
+    string name
+    enum category
+  }
+  MATERIAL_PACKAGE_SPEC {
+    bigint spec_id PK
+    bigint material_id FK
+    string origin
+  }
+  ITEMS {
+    bigint item_id PK
+    string name
+    decimal standard_batch_qty
+  }
+  RECIPE_ITEM {
+    bigint recipe_item_id PK
+    bigint item_id FK
+    bigint material_id FK
+  }
+  USER {
+    bigint user_id PK
+    string username
+    string password_hash
+    tinyint access_level
+    boolean is_active
+  }
+  SUPPLIER {
+    bigint supplier_id PK
+    string name
+  }
+  MATERIAL_ORDER {
+    bigint order_id PK
+    bigint material_id FK
+    bigint supplier_ref_id FK
+  }
+  MATERIAL_ARRIVAL {
+    bigint arrival_id PK
+    bigint supplier_ref_id FK
+  }
+  MATERIAL_ARRIVAL_LINE {
+    bigint line_id PK
+    bigint arrival_id FK
+    bigint material_id FK
+    bigint order_id FK
+  }
+  MATERIAL_LOT {
+    bigint lot_id PK
+    bigint material_id FK
+    bigint arrival_line_id FK
+    bigint origin_hold_id FK
+    date expiry_date
+    decimal remaining_qty
+    boolean needs_review
+  }
+  HOLD_RESOLUTION {
+    bigint hold_id PK
+    bigint line_id FK
+    bigint resolved_line_id FK
+  }
+  STOCK_ADJUSTMENT {
+    bigint adjustment_id PK
+    bigint lot_id FK
+  }
+  MANUFACTURING_BATCH {
+    bigint batch_id PK
+    bigint item_id FK
+    bigint mrp_run_id FK
+    date batch_date
+    int batch_seq
+    enum status
+  }
+  BATCH_MATERIAL_USAGE {
+    bigint usage_id PK
+    bigint batch_id FK
+    bigint material_lot_id FK
+  }
+  ITEM_STOCK_ADJUSTMENT {
+    bigint adjustment_id PK
+    bigint batch_id FK
+  }
+  MRP_RUN {
+    bigint run_id PK
+  }
+  BATCH_ORDER_ALLOCATION {
+    bigint allocation_id PK
+    bigint batch_id FK
+    bigint order_line_id FK
+  }
+  CUSTOMER {
+    bigint customer_id PK
+    string name
+  }
+  CUSTOMER_ORDER {
+    bigint order_id PK
+    bigint customer_id FK
+  }
+  ORDER_LINE {
+    bigint line_id PK
+    bigint order_id FK
+    bigint item_id FK
+  }
+  CARRIER {
+    bigint carrier_id PK
+    string name
+  }
+  SHIPMENT {
+    bigint shipment_id PK
+    bigint carrier_id FK
+  }
+  SHIPMENT_LINE {
+    bigint line_id PK
+    bigint shipment_id FK
+    bigint order_line_id FK
+    bigint batch_id FK
+  }
+`;
+const { svg } = await mermaid.render('erd-svg', source);
+document.getElementById('erd').innerHTML = svg;
+
+document.querySelectorAll('#erd svg.erDiagram .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+
+document.querySelectorAll('#erd svg.erDiagram .row-rect-odd path, #erd svg.erDiagram .row-rect-even path').forEach(p => {
+  p.setAttribute('stroke', 'none');
+});
+</script>
